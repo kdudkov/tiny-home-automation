@@ -14,6 +14,7 @@ class Server(web.Application):
         self.router.add_static('/static/', os.path.join(BASE_PATH, 'static'), name='static')
         self.router.add_route('GET', '/', self.index)
         self.router.add_route('GET', '/items/', self.get_items)
+        self.router.add_route('GET', '/items/{tag}', self.get_items)
         self.router.add_route('GET', '/item/{name}', self.get_item)
         self.router.add_route('GET', '/item/{name}/', self.get_item)
         self.router.add_route('PUT', '/item/{name}', self.put_item)
@@ -34,7 +35,8 @@ class Server(web.Application):
 
     @asyncio.coroutine
     def get_items(self, request):
-        return self.json_resp(self.context.items.as_list())
+        tag = request.match_info.get('tag')
+        return self.json_resp(self.context.items.as_list(tag))
 
     @asyncio.coroutine
     def get_item(self, request):

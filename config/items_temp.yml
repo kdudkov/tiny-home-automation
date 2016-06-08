@@ -1,0 +1,67 @@
+---
+- name: out_temp
+  type: number
+  input: mqtt:esp01/ESP00A0D40D/sensors/dsw1
+  ttl: 180
+  format: '%.1f °C'
+  decimals: 1
+  tags: [temperature, out]
+
+- name: room_temp
+  type: number
+  input: mqtt:esp01/ESP00A0D40D/sensors/dsw2
+  ttl: 180
+  format: '%.1f °C'
+  decimals: 1
+  tags: [temperature, room]
+
+- name: room_temp_2
+  type: number
+  input: mqtt:esp01/ESP00A0D40D/sensors/bmpt
+  ttl: 180
+  format: '%.1f °C'
+  decimals: 1
+  tags: [temperature, room]
+
+- name: room_temp_pi
+  type: number
+  input: mqtt:one_wire/28.011564d12fff
+  ttl: 180
+  format: '%.1f °C'
+  decimals: 1
+  tags: [temperature, room]
+
+- name: room_temp_pi2
+  type: number
+  input: mqtt:one_wire/28.0000031452a4
+  ttl: 180
+  format: '%.1f °C'
+  decimals: 1
+  tags: [temperature, room]
+
+- name: room_thermostat
+  type: number
+  default: 18
+  tags: [thermostat, room]
+
+- name: room_thermostat_switch
+  type: switch
+  default: Off
+  tags: [thermostat, room]
+
+- name: pressure
+  type: number
+  decimals: 1
+  format: '%.1f mbar'
+  tags: [out, weather]
+
+- name: pressure_mm
+  input: mqtt:esp01/ESP00A0D40D/sensors/bmpp
+  type: number
+  decimals: 2
+
+- name: kankun_switch
+  input: kankun:room
+  output: kankun:room
+  type: switch
+  tags: [room]

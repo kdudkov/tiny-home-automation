@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Mahno</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-dark.min.css" rel="stylesheet">
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 50px;
+        }
+
+        div.main {
+            padding-top: 20px;
+        }
+
+        div.item {
+            min-height: 120px;
+            text-align: center;
+        }
+
+        div.item .name {
+            padding-top: 12px;
+            font-size: 16px;
+        }
+
+        div.item .value {
+            font-size: 26px;
+        }
+
+        div.item .switch {
+            font-size: 32px;
+        }
+
+        div.item .age {
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body ng-app="app" ng-controller="MainCtrl">
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Mahno plan-b</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Plan-b</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+
+<div class="container main">
+    <div>
+        <div class="alert alert-danger" ng-hide="error_text == null || error_text == ''">
+            <p>{{ error_text }}</p>
+        </div>
+
+        <div class="row" ng-show="error_text == null || error_text == ''">
+            <div class="col-sm-2">
+                <div class="list-group">
+                    <a href="#" class="list-group-item" ng-repeat="tag in tags" ng-click="set_tag(tag)"
+                       ng-class="{'list-group-item-success': tag==current_tag}">{{ tag }}</a>
+                </div>
+            </div>
+
+            <div class="col-sm-10">
+                <div class="col-lg-4 col-md-5 col-sm-6" ng-repeat="item in data" ng-show="has_tag(item)">
+                    <div class="panel panel-default item">
+                        <div class="name">{{ item.h_name }}</div>
+                        <div class="value" ng-show="item.class != 'Switch'">{{ item.formatted }}</div>
+                        <div class="switch" ng-show="item.class == 'Switch'" ng-click="cmd(item)">
+                            <i class="fa"
+                               ng-class="{'fa-circle': item.value == 'On', 'fa-circle-o': item.value == 'Off'}"></i>
+                        </div>
+                        <div class="age">{{ age(item.checked, true) }} | {{ age(item.changed, true) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div id="footer">
+    <div class="container">
+        <p class="text-muted credit">&copy; Konstantin 2016</p>
+    </div>
+</div>
+
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.min.js"></script>
+<script src="/static/js/angular.min.js"></script>
+
+<script>
+
+    var json_url = '/items/';
+    var cmd_url = '/item/';
+    var reload_time = 5000;
+
+    app = angular.module('app', []);
+
+    app.filter('since', function () {
+        return function (n, time) {
+            var res = '';
+            if (time) {
+                n = new Date().getTime() / 1000 - n;
+            }
+            if (n < 0) return 'future';
+            var h = Math.floor(n / 3600);
+            if (h > 0) {
+                res += h + 'h ';
+                n = n % 3600;
+            }
+            var m = Math.floor(n / 60);
+            if (m > 0) {
+                res += m + 'm ';
+                n = n % 60;
+            }
+            res += Math.floor(n) + 's';
+            return res;
+        }
+    });
+
+    app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
+
+        get_data = function () {
+            $http.get(json_url)
+                    .success(function (data) {
+                                $scope.updated = new Date();
+                                $scope.data = data;
+                                var tags = new Set();
+                                for (var item of data) {
+                                    if (item != null && item.hasOwnProperty("tags")) {
+                                        for (var ii of item.tags) {
+                                            tags.add(ii);
+                                        }
+                                    }
+                                }
+                                $scope.tags = Array.from(tags);
+                                $scope.tags.sort();
+                                $scope.error_text = '';
+                                $timeout(get_data, reload_time);
+                            }
+                    )
+                    .error(function () {
+                        $log.error('error getting data');
+                        $scope.error_text = 'не могу получить данные с сервера';
+                        $timeout(get_data, reload_time * 5);
+                    });
+        }
+        ;
+
+        $scope.cmd = function (item) {
+            var cmd = 'Off';
+            if (item._value == 'Off') {
+                cmd = 'On';
+            }
+            $log.info('command ' + cmd + ' to ' + item.name);
+            item._value = cmd;
+            item.value = cmd;
+            $http.post(cmd_url + item.name, cmd)
+                    .success(function (data) {
+                        $log.info('ok ' + data);
+
+                    })
+                    .error(function () {
+                        $log.error('error sending command to ' + item.name);
+                    });
+        };
+
+        $scope.set_tag = function (tag) {
+            $log.info("set tag " + tag);
+            $scope.current_tag = tag;
+        };
+
+        $scope.has_tag = function (item) {
+            if ($scope.current_tag == null) return true;
+            if (item.hasOwnProperty("tags")) {
+                for (var tag of item.tags) {
+                    if (tag == $scope.current_tag) return true;
+                }
+            }
+            return false;
+        };
+
+        $scope.age = function (n, time) {
+            var res = '';
+            if (n == null || n == undefined) return '';
+            if (time) {
+                if (n <= 0) return '-';
+                n = new Date().getTime() / 1000 - n;
+            }
+            if (n <= 0) return 'now';
+            var h = Math.floor(n / 3600);
+            if (h > 0) {
+                res += h + 'ч ';
+                n = n % 3600;
+            }
+            var m = Math.floor(n / 60);
+            if (m > 0) {
+                res += m + 'м ';
+                n = n % 60;
+            }
+            res += Math.floor(n) + 'с';
+            return res;
+        };
+
+        get_data();
+    });
+
+</script>
+</body>
+</html>

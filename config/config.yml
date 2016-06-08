@@ -1,0 +1,10 @@
+---
+mqtt:
+  url: mqtt://192.168.1.1
+
+server:
+  port: 8880
+
+kankun:
+  room: 192.168.1.200
+

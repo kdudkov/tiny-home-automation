@@ -1,0 +1,19 @@
+---
+mqtt:
+  url: mqtt://192.168.0.1
+
+server:
+  port: 8880
+
+modbus:
+  host: 192.168.0.1
+  port: 55666
+  poll:
+    - fn: 3
+      addr: 5
+      reg: 1
+      size: 2
+
+kodi:
+  kitchen: 192.168.0.231:8080
+  room: 192.168.0.2:8080

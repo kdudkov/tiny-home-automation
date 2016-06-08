@@ -1,0 +1,6 @@
+---
+- name: home_mode
+  type: text
+  default: day
+  choices: [day, night, nobody_home, waiting]
+  tags: [pos, room]

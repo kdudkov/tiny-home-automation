@@ -1,0 +1,9 @@
+.idea
+*.py[co]
+*.log
+*.log.[0-9]
+*.py~
+local_config.py
+test1
+*.dump
+items.json

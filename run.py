@@ -4,6 +4,7 @@
 import argparse
 import asyncio
 import functools
+import inspect
 import json
 import logging.handlers
 import os
@@ -14,14 +15,14 @@ import traceback
 
 import yaml
 
-import rules
 import server
-from actors.kodi import KodiActor
 from actors.kankun import KankunActor
+from actors.kodi import KodiActor
 from actors.modbus import ModbusActor
 from actors.mqtt import MqttActor
 from core import Context
 from core.items import *
+from rules.abstract import Rule
 
 LOG = logging.getLogger(__name__)
 
@@ -41,8 +42,7 @@ class Main(object):
         self.context = Context()
         self.load_config()
 
-        for r in rules.rules:
-            self.context.add_rule(r)
+        self.load_rules()
 
         self.actors = [MqttActor()]
 
@@ -111,6 +111,21 @@ class Main(object):
                     self.load_items_file(os.path.join(BASE_PATH, 'config', s))
                 except:
                     LOG.exception('yml load')
+
+    def load_rules(self):
+        for fn in os.listdir('rules'):
+            if fn.startswith('.') or fn.startswith('_') or not fn.endswith('.py'):
+                continue
+            mod = __import__('rules.' + fn[:-3])
+            submod = getattr(mod, fn[:-3])
+            for name1 in dir(submod):
+                classes = Rule.__subclasses__()
+                classes.append(Rule)
+                if inspect.isclass(getattr(submod, name1)):
+                    r = getattr(submod, name1)
+                    if issubclass(r, tuple(classes)) and r != Rule and not 'Abstract' in name1:
+                        LOG.info('loading rule %s.%s', fn[:-3], name1)
+                        self.context.add_rule(r())
 
     def load_items_file(self, fname):
         conf = yaml.load(open(fname, 'r'))

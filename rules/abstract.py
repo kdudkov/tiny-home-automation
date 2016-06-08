@@ -55,17 +55,3 @@ class Rule(object):
         else:
             return m > m1 or m < m2
 
-
-class ProcessPressureRule(Rule):
-    from_item = 'room_temp'
-    to_item = 'weather_pressure'
-
-    on_change = [from_item]
-
-    @asyncio.coroutine
-    def process(self, name, old_val, val):
-        item = self.context.items.get_item(self.from_item)
-        if item and item.value:
-            new_val = item.value * 1.33322
-            LOG.info('new value %s', new_val)
-            # self.post_update(self.to_item, new_val)

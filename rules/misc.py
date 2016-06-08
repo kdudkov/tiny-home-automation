@@ -1,6 +1,7 @@
 from .abstract import Rule
 
-class PressureRule(Rule):
+
+class ConvertPressureRule(Rule):
     on_change = ['pressure_mm']
 
     def process(self, name, old_val, val):

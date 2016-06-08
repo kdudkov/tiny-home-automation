@@ -7,7 +7,7 @@ from . import abstract
 LOG = logging.getLogger(__name__)
 
 
-class Thermostat(abstract.Rule):
+class AbstractThermostat(abstract.Rule):
     timeout = 90
 
     def __init__(self, switch_item, temp_item, thermostat_item, actor_item, is_cooler=False, gist=1):
@@ -51,3 +51,9 @@ class Thermostat(abstract.Rule):
                 self.last_switch = time.time()
                 LOG.info('too cold (%s), setting %s to %s', t, self.actor_item, target_sw)
                 self.command(self.actor_item, target_sw)
+
+
+class RoomThermostat(AbstractThermostat):
+    def __init__(self):
+        AbstractThermostat.__init__(self, 'room_thermostat_switch', 'room_temp_pi', 'room_thermostat', 'kankun_switch',
+                                    False)

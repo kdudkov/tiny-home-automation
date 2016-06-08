@@ -27,7 +27,8 @@ class Kankun(object):
         if params:
             p.update(params)
         with aiohttp.Timeout(self.timeout):
-            resp = yield from self.session.get('http://%s/cgi-bin/json.cgi' % self.addr, params=p)
+            with aiohttp.Timeout(self.timeout):
+                resp = yield from self.session.get('http://%s/cgi-bin/json.cgi' % self.addr, params=p)
         if resp.status != 200:
             raise Exception('http %s' % resp.status)
         try:
@@ -66,6 +67,8 @@ class KankunActor(AbstractActor):
             res = None
             try:
                 res = yield from self.switch.req({'get': 'state'})
+            except asyncio.TimeoutError:
+                LOG.error('timeout talking to %s', self.addr)
             except Exception as e:
                 LOG.exception('loop')
             if res:

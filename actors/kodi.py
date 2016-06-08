@@ -125,6 +125,8 @@ class KodiActor(AbstractActor):
             res = None
             try:
                 res = yield from self.kodi.get_status()
+            except asyncio.TimeoutError:
+                LOG.error('timeout talking to %s', self.addr)
             except Exception as e:
                 LOG.exception('loop')
             if res:

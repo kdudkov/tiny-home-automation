@@ -123,7 +123,7 @@ class Main(object):
                 classes.append(Rule)
                 if inspect.isclass(getattr(submod, name1)):
                     r = getattr(submod, name1)
-                    if issubclass(r, tuple(classes)) and r != Rule and not 'Abstract' in name1:
+                    if issubclass(r, tuple(classes)) and r != Rule and 'Abstract' not in name1:
                         LOG.info('loading rule %s.%s', fn[:-3], name1)
                         self.context.add_rule(r())
 

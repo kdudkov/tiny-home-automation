@@ -3,6 +3,7 @@
 
 import logging
 import time
+from datetime import datetime, date
 from operator import attrgetter
 
 from core import functions
@@ -151,12 +152,12 @@ class Item(object):
         return self.config.get('h_name') or self.name
 
 
-class Text(Item):
+class TextItem(Item):
     def convert_value(self, val):
         return val
 
 
-class Number(Item):
+class NumberItem(Item):
     def convert_value(self, val):
         v = float(val)
         if self.config.get('decimals'):
@@ -165,6 +166,24 @@ class Number(Item):
         return v
 
 
-class Switch(Item):
+class SwitchItem(Item):
     def convert_value(self, val):
         return 'On' if str(val).lower() in ('on', 'true', '1', 'open') else 'Off'
+
+
+class DateItem(Item):
+    def convert_value(self, val):
+        if isinstance(val, (datetime, date)):
+            return time.mktime(val.timetuple())
+        return int(val)
+
+    @property
+    def formatted(self):
+        if self.value is None:
+            return None
+        now = datetime.now()
+        d = datetime.fromtimestamp(self.value)
+        if now.date() == d.date():
+            return d.strftime('%H:%M')
+        else:
+            return d.strftime('%d.%m %H:%M')

@@ -1,3 +1,4 @@
 pyyaml
 hbmqtt
 aiohttp
+astral>=1.2

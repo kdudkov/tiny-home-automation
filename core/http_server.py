@@ -1,10 +1,10 @@
-import os
 import asyncio
 import json
+import os
 
 from aiohttp import web
 
-BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 
 class Server(web.Application):

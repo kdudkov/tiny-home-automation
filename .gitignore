@@ -1,9 +1,10 @@
-.idea
+__pycache__/
 *.py[co]
+.idea
+env/
 *.log
-*.log.[0-9]
+*.log.*
 *.py~
 local_config.py
-test1
 *.dump
 items.json

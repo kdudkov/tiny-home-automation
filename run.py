@@ -14,13 +14,13 @@ import sys
 import traceback
 
 import yaml
-
-import server
+from actors.astro import AstroActor
 from actors.kankun import KankunActor
 from actors.kodi import KodiActor
 from actors.modbus import ModbusActor
 from actors.mqtt import MqttActor
 from core import Context
+from core import http_server
 from core.items import *
 from rules.abstract import Rule
 
@@ -44,7 +44,7 @@ class Main(object):
 
         self.load_rules()
 
-        self.actors = [MqttActor()]
+        self.actors = [MqttActor(), AstroActor()]
 
         if 'modbus' in self.config:
             LOG.info('add modbus actor host %s', self.config['modbus']['host'])
@@ -134,11 +134,13 @@ class Main(object):
         for item in conf:
             s = None
             if item['type'] == 'switch':
-                s = Switch(item['name'])
+                s = SwitchItem(item['name'])
             if item['type'] == 'number':
-                s = Number(item['name'])
+                s = NumberItem(item['name'])
             if item['type'] == 'text':
-                s = Text(item['name'])
+                s = TextItem(item['name'])
+            if item['type'] == 'date':
+                s = DateItem(item['name'])
             if s:
                 s.config = item
                 s.input = item.get('input')
@@ -189,7 +191,7 @@ class Main(object):
             yield from asyncio.sleep(0.01)
 
     def run(self):
-        app = server.get_app(self.context)
+        app = http_server.get_app(self.context)
         self.loop = asyncio.get_event_loop()
         self.context.loop = self.loop
         self.coroutines = []

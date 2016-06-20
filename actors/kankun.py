@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
-import json
 import logging
-import random
 
 import aiohttp
-
 from . import AbstractActor
 
-LOG = logging.getLogger('mahno.' + __name__)
+LOG = logging.getLogger(__name__)
 
 
 class Kankun(object):

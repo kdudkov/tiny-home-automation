@@ -83,8 +83,8 @@
                 <div class="col-lg-4 col-md-5 col-sm-6" ng-repeat="item in data" ng-show="has_tag(item)">
                     <div class="panel panel-default item">
                         <div class="name">{{ item.h_name }}</div>
-                        <div class="value" ng-show="item.class != 'Switch'">{{ item.formatted }}</div>
-                        <div class="switch" ng-show="item.class == 'Switch'" ng-click="cmd(item)">
+                        <div class="value" ng-show="item.class != 'SwitchItem'">{{ item.formatted }}</div>
+                        <div class="switch" ng-show="item.class == 'SwitchItem'" ng-click="cmd(item)">
                             <i class="fa"
                                ng-class="{'fa-circle': item.value == 'On', 'fa-circle-o': item.value == 'Off'}"></i>
                         </div>

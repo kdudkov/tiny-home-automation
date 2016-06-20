@@ -3,7 +3,7 @@ import logging
 import math
 
 from actors import AbstractActor
-from astral import Astral, Location
+from astral import Location
 
 LOG = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class AstroActor(AbstractActor):
         coords = self.config.get('coords', {'lat': 59.5, 'lon': 30.19})
         self.lat = coords['lat']
         self.lon = coords['lon']
+        self.alt = coords.get('alt', 0)
 
     @asyncio.coroutine
     def loop(self):
@@ -30,13 +31,9 @@ class AstroActor(AbstractActor):
             yield from asyncio.sleep(300)
 
     def compute(self):
-        ast = Astral()
-        l = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', 0))
+        l = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', self.alt))
 
         alt = l.solar_elevation()
-
-        sun = l.sun()
-
         daytime = 'day'
         if alt < -6:
             daytime = 'night'
@@ -46,6 +43,7 @@ class AstroActor(AbstractActor):
         self.context.set_item_value('sun_alt', alt)
         self.context.set_item_value('sun_az', l.solar_azimuth())
 
+        sun = l.sun()
         self.context.set_item_value('sunrise', sun['sunrise'])
         self.context.set_item_value('sunset', sun['sunset'])
         self.context.set_item_value('noon', sun['noon'])

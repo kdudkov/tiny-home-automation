@@ -86,7 +86,7 @@
                         <div class="value" ng-show="item.class != 'SwitchItem'">{{ item.formatted }}</div>
                         <div class="switch" ng-show="item.class == 'SwitchItem'" ng-click="cmd(item)">
                             <i class="fa"
-                               ng-class="{'fa-circle': item.value == 'On', 'fa-circle-o': item.value == 'Off'}"></i>
+                               ng-class="{'fa-dot-circle-o': item.value == 'On', 'fa-circle-o': item.value == 'Off'}"></i>
                         </div>
                         <div class="age">{{ age(item.checked, true) }} | {{ age(item.changed, true) }}</div>
                     </div>

@@ -15,9 +15,7 @@ class MqttActor(AbstractActor):
         self.config = config
         self.context = context
 
-        self.mqtt_client = hbmqtt.client.MQTTClient(config={'auto_reconnect': True,
-                                                            'reconnect_max_interval': 10,
-                                                            'reconnect_retries': 500})
+        self.mqtt_client = hbmqtt.client.MQTTClient(config={'auto_reconnect': False})
 
     @asyncio.coroutine
     def loop(self):
@@ -39,6 +37,7 @@ class MqttActor(AbstractActor):
                 connected = False
             if not connected:
                 yield from self.disconnect()
+                yield from asyncio.sleep(1)
         yield from self.disconnect()
 
     @asyncio.coroutine
@@ -51,6 +50,12 @@ class MqttActor(AbstractActor):
             ])
             LOG.info('connected')
             return True
+        except OSError:
+            LOG.error('connect failed')
+            return False
+        except hbmqtt.client.ConnectException:
+            LOG.error('connect exception')
+            return False
         except:
             LOG.exception('error on connect')
             return False

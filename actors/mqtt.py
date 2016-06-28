@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 import hbmqtt.client
-
 from . import AbstractActor
 
 LOG = logging.getLogger(__name__)
@@ -25,8 +24,7 @@ class MqttActor(AbstractActor):
         connected = False
         while self.running:
             if not connected:
-                yield from self.connect()
-                connected = True
+                connected = yield from self.connect()
             try:
                 message = yield from self.mqtt_client.deliver_message()
                 packet = message.publish_packet
@@ -52,8 +50,10 @@ class MqttActor(AbstractActor):
                 ('#', 1),
             ])
             LOG.info('connected')
+            return True
         except:
             LOG.exception('error on connect')
+            return False
 
     @asyncio.coroutine
     def disconnect(self):

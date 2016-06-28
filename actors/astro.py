@@ -35,11 +35,21 @@ class AstroActor(AbstractActor):
 
         alt = l.solar_elevation()
         daytime = 'day'
-        if alt < -6:
-            daytime = 'night'
-        elif -6 <= alt <= 0:
+        if -6 <= alt < 0:
             daytime = 'twilight'
+            daytime_ext = 'civil_twilight'
+        elif -12 <= alt < -6:
+            daytime = 'night'
+            daytime_ext = 'nautical_twilight'
+        elif -18 <= alt < -12:
+            daytime = 'night'
+            daytime_ext = 'astro_twilight'
+        elif alt < -18:
+            daytime = 'night'
+            daytime_ext = 'night'
+
         self.context.set_item_value('daytime', daytime)
+        self.context.set_item_value('daytime_ext', daytime_ext)
         self.context.set_item_value('sun_alt', alt)
         self.context.set_item_value('sun_az', l.solar_azimuth())
 

@@ -3,6 +3,10 @@
   type: text
   tags: [astro]
 
+- name: daytime_ext
+  type: text
+  tags: [astro]
+
 - name: sun_az
   h_name: 'sun azimuth'
   format: '%.0f'

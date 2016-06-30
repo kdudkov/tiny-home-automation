@@ -11,10 +11,13 @@ class Rule(object):
     context = None
 
     def add_delayed(self, seconds, fn):
-        self.context.add_delayed(seconds, fn)
+        return self.context.add_delayed(seconds, fn)
 
     def remove_delayed(self, d):
-        self.context.remove_delayed(d)
+        if d:
+            LOG.info('remove delayed')
+            d.cancel()
+        return None
 
     def post_update(self, item_name, value):
         self.context.set_item_value(item_name, value)
@@ -44,8 +47,8 @@ class Rule(object):
         h1, m1 = [int(x) for x in t1.split(':', 1)]
         h2, m2 = [int(x) for x in t2.split(':', 1)]
 
-        m1 = h1 * 60 + m1
-        m2 = h2 * 60 + m2
+        m1 += h1 * 60
+        m2 += h2 * 60
 
         now = dt.now()
         m = now.hour * 60 + now.minute

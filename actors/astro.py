@@ -52,7 +52,7 @@ class AstroActor(AbstractActor):
 
         self.context.set_item_value('daytime', daytime)
         self.context.set_item_value('daytime_ext', daytime_ext)
-        self.context.set_item_value('sun_alt', alt)
+        self.context.set_item_value('sun_alt', l.solar_elevation())
         self.context.set_item_value('sun_az', l.solar_azimuth())
 
         sun = l.sun()

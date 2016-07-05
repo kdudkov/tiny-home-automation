@@ -33,7 +33,8 @@ class AstroActor(AbstractActor):
     def compute(self):
         l = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', self.alt))
 
-        alt = l.solar_elevation()
+        # 15' sun bottom + 35' refraction
+        alt = l.solar_elevation() + 5. / 6
         daytime = 'day'
         daytime_ext = 'day'
         if -6 <= alt < 0:

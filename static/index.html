@@ -151,7 +151,11 @@
                                         }
                                     }
                                 }
-                                $scope.tags = Array.from(tags);
+                        var t = [];
+                        tags.forEach(function (x) {
+                            t.push(x);
+                        });
+                        $scope.tags = t;
                                 $scope.tags.sort();
                                 $scope.error_text = '';
                                 $timeout(get_data, reload_time);

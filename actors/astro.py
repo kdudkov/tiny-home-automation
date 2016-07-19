@@ -34,10 +34,10 @@ class AstroActor(AbstractActor):
         l = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', self.alt))
 
         # 15' sun bottom + 35' refraction
-        alt = l.solar_elevation() + 5. / 6
+        alt = l.solar_elevation()
         daytime = 'day'
         daytime_ext = 'day'
-        if -6 <= alt < 0:
+        if -6 <= alt < 5. / 6:
             daytime = 'twilight'
             daytime_ext = 'civil_twilight'
         elif -12 <= alt < -6:

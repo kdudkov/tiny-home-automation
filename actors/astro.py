@@ -37,7 +37,7 @@ class AstroActor(AbstractActor):
         alt = l.solar_elevation()
         daytime = 'day'
         daytime_ext = 'day'
-        if -6 <= alt < 5. / 6:
+        if -6 <= alt < -5. / 6:
             daytime = 'twilight'
             daytime_ext = 'civil_twilight'
         elif -12 <= alt < -6:

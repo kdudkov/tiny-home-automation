@@ -14,6 +14,7 @@ import sys
 import traceback
 
 import yaml
+
 from actors.astro import AstroActor
 from actors.kankun import KankunActor
 from actors.kodi import KodiActor
@@ -146,6 +147,7 @@ class Main(object):
                 s.input = item.get('input')
                 s.output = item.get('output')
                 s.ttl = item.get('ttl', 0)
+                s.read_only = bool(item.get('read_only', False))
                 s.tags = item.get('tags', [])
                 if 'default' in item:
                     s.set_value(item['default'])

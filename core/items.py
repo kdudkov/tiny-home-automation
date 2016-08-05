@@ -62,6 +62,7 @@ class Item(object):
     input = None
     output = None
     ttl = 0
+    read_only = False
     tags = []
     config = {}
 
@@ -93,7 +94,8 @@ class Item(object):
                 'changed': self.changed,
                 'tags': self.tags,
                 'formatted': self.formatted,
-                'h_name': self.h_name
+                'h_name': self.h_name,
+                'read_only': self.read_only
                 }
 
     def is_value(self, st, for_time=1.0):

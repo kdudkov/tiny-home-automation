@@ -83,8 +83,11 @@
                 <div class="col-lg-4 col-md-5 col-sm-6" ng-repeat="item in data" ng-show="has_tag(item)">
                     <div class="panel panel-default item">
                         <div class="name">{{ item.h_name }}</div>
-                        <div class="value" ng-show="item.class != 'SwitchItem'">{{ item.formatted }}</div>
-                        <div class="switch" ng-show="item.class == 'SwitchItem'" ng-click="cmd(item)">
+                        <div class="value" ng-show="!(item.class == 'SwitchItem' && ! item.read_only)">{{ item.formatted
+                            }}
+                        </div>
+                        <div class="switch" ng-show="item.class == 'SwitchItem' && ! item.read_only"
+                             ng-click="toggle_switch(item)">
                             <i class="fa"
                                ng-class="{'fa-dot-circle-o': item.value == 'On', 'fa-circle-o': item.value == 'Off'}"></i>
                         </div>
@@ -169,7 +172,7 @@
         }
         ;
 
-        $scope.cmd = function (item) {
+        $scope.toggle_switch = function (item) {
             var cmd = 'Off';
             if (item._value == 'Off') {
                 cmd = 'On';

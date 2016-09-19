@@ -147,7 +147,7 @@ class Main(object):
                 s.input = item.get('input')
                 s.output = item.get('output')
                 s.ttl = item.get('ttl', 0)
-                s.read_only = bool(item.get('read_only', False))
+                s.ui = bool(item.get('ui', False))
                 s.tags = item.get('tags', [])
                 if 'default' in item:
                     s.set_value(item['default'])

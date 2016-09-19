@@ -43,10 +43,12 @@
   type: number
   default: 18
   tags: [thermostat, room]
+  ui: true
 
 - name: room_thermostat_switch
   type: switch
   default: Off
+  ui: true
   tags: [thermostat, room]
 
 - name: pressure
@@ -64,4 +66,5 @@
   input: kankun:room
   output: kankun:room
   type: switch
+  ui: true
   tags: [room]

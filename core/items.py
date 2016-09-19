@@ -95,7 +95,7 @@ class Item(object):
                 'tags': self.tags,
                 'formatted': self.formatted,
                 'h_name': self.h_name,
-                'read_only': self.read_only
+                'ui': self.ui
                 }
 
     def is_value(self, st, for_time=1.0):

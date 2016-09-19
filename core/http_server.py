@@ -13,6 +13,7 @@ class Server(web.Application):
     def init(self):
         self.router.add_static('/static/', os.path.join(BASE_PATH, 'static'), name='static')
         self.router.add_route('GET', '/', self.index)
+        self.router.add_route('GET', '/2', self.index2)
         self.router.add_route('GET', '/items/', self.get_items)
         self.router.add_route('GET', '/items/{tag}', self.get_items)
         self.router.add_route('GET', '/item/{name}', self.get_item)
@@ -32,6 +33,10 @@ class Server(web.Application):
     @asyncio.coroutine
     def index(self, request):
         return web.Response(body=open('static/index.html').read().encode('UTF-8'))
+
+    @asyncio.coroutine
+    def index2(self, request):
+        return web.Response(body=open('static/index2.html').read().encode('UTF-8'))
 
     @asyncio.coroutine
     def get_items(self, request):

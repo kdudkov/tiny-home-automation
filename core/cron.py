@@ -1,5 +1,7 @@
 from datetime import datetime
 
+name = '*cron*'
+
 
 def check_cron_value(val, dt):
     a = []

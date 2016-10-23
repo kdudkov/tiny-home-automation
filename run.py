@@ -171,7 +171,7 @@ class Main(object):
                     try:
                         if rule.on_time and cron.check_cron_value(rule.on_time, dt):
                             LOG.info('running rule %s on %s change', rule.__class__.__name__, name)
-                            asyncio.async(rule.try_process('*cron*', None, dt), loop=self.loop)
+                            asyncio.async(rule.try_process(cron.name, None, dt), loop=self.loop)
                     except:
                         LOG.exception('cron worker')
 

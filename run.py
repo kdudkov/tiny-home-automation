@@ -21,6 +21,7 @@ from actors.kodi import KodiActor
 from actors.modbus import ModbusActor
 from actors.mqtt import MqttActor
 from core import Context
+from core import cron
 from core import http_server
 from core.items import *
 from rules.abstract import Rule
@@ -165,6 +166,15 @@ class Main(object):
                 minute = new_m
                 dump = self.context.items.as_list()
                 json.dump(dump, open('items.json', 'w'), indent=4)
+                dt = time.time()
+                for rule in self.context.rules:
+                    try:
+                        if rule.on_time and cron.check_cron_value(rule.on_time, dt):
+                            LOG.info('running rule %s on %s change', rule.__class__.__name__, name)
+                            asyncio.async(rule.try_process('*cron*', None, dt), loop=self.loop)
+                    except:
+                        LOG.exception('cron worker')
+
             yield from asyncio.sleep(30)
 
     @asyncio.coroutine

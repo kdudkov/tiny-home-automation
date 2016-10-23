@@ -90,7 +90,7 @@
                             <i class="fa fa-caret-square-o-up" ng-show="item.class == 'NumberItem' && item.ui"
                                ng-click="add_val(item, 1)"></i>
                         </div>
-                        <div class="switch" ng-show="item.class == 'SwitchItem' && ! item.read_only"
+                        <div class="switch" ng-show="item.class == 'SwitchItem' && item.ui"
                              ng-click="toggle_switch(item)">
                             <i class="fa"
                                ng-class="{'fa-dot-circle-o': item.value == 'On', 'fa-circle-o': item.value == 'Off'}"></i>

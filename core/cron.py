@@ -24,7 +24,7 @@ def test_val(c, v):
     if c == '*':
         return True
 
-    values = get_values(v)
+    values = get_values(c)
 
     for val in values:
         if '/' in val:

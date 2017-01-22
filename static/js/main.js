@@ -76,13 +76,12 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
           } else {
             $log.info('Socket dropped');
           }
-          $log.info('Code: ' + event.code + ' resdon: ' + event.reason);
+          $log.info('Code: ' + event.code + ' reason: ' + event.reason);
           $timeout(ws_connect, ws_reconnect_time);
         };
 
         socket.onmessage = function(event) {
             var obj = JSON.parse(event.data);
-
             for (var item of $scope.data) {
                  if (item != null && item.name == obj.name) {
                         item.value = obj.value;
@@ -90,9 +89,8 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
                         item.formatted = obj.formatted;
                         item.checked = obj.checked;
                         item.changed = obj.changed;
-//                        $log.info(obj);
-                    $scope.$apply();
-                    break;
+                        $scope.$apply();
+                        break;
                  }
             }
         };

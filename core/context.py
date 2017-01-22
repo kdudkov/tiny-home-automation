@@ -1,4 +1,6 @@
+import asyncio
 import collections
+import functools
 import logging
 import time
 
@@ -15,9 +17,19 @@ class Context(object):
         self.items = Items()
         self.actuators = {}
         self.rules = []
-        self.changes = collections.deque()
+        self.listeners = []
         self.commands = collections.deque()
         self.loop = None
+        self.callbacks = {}
+
+    def do(self, fn, *args):
+        if asyncio.iscoroutinefunction(fn):
+            asyncio.async(fn(*args), loop=self.loop)
+        else:
+            self.loop.call_soon(functools.partial(fn, *args))
+
+    def add_cb(self, name, cb):
+        self.callbacks[name] = cb
 
     def command(self, name, cmd):
         item = self.items.get_item(name)
@@ -38,9 +50,15 @@ class Context(object):
 
     def set_item_value(self, name, value):
         t = self.items.set_item_value(name, value)
+        item = self.items.get_item(name)
+        cb = self.callbacks.get('oncheck')
+        if cb and item:
+            self.do(cb, item)
         if t:
             oldv, newv = t
-            self.changes.append((name, oldv, newv, time.time()))
+            cb = self.callbacks.get('onchange')
+            if cb:
+                self.do(cb, name, oldv, newv, time.time())
 
     def add_delayed(self, seconds, fn):
         if self.loop:

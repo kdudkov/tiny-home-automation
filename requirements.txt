@@ -1,4 +1,4 @@
 pyyaml
 hbmqtt
-aiohttp
+aiohttp>=1.0.2
 astral>=1.2

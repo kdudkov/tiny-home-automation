@@ -42,6 +42,9 @@ class Main(object):
         self.config = {'server': {'port': 8880}}
 
         self.context = Context()
+        self.context.add_cb('oncheck', self.on_item_check)
+        self.context.add_cb('onchange', self.on_item_change)
+
         self.load_config()
 
         self.load_rules()
@@ -178,6 +181,19 @@ class Main(object):
             yield from asyncio.sleep(30)
 
     @asyncio.coroutine
+    def on_item_check(self, item):
+        arg = json.dumps(item.to_dict())
+        for lsnr in self.context.listeners:
+            self.do(lsnr, arg)
+
+    @asyncio.coroutine
+    def on_item_change(self, name, old_val, val, time):
+        for rule in self.context.rules:
+            if name in rule.on_change:
+                LOG.info('running rule %s on %s change', rule.__class__.__name__, name)
+                asyncio.async(rule.try_process(name, old_val, val), loop=self.loop)
+
+    @asyncio.coroutine
     def updates_processor(self):
         while self.running:
             if self.context.changes:
@@ -195,15 +211,17 @@ class Main(object):
                 cmd, arg = self.context.commands.popleft()
                 for actor in self.actors:
                     if actor.is_my_command(cmd, arg):
-                        if asyncio.iscoroutinefunction(actor.command):
-                            asyncio.async(actor.command(cmd, arg), loop=self.loop)
-                        else:
-                            self.loop.call_soon(functools.partial(actor.command, cmd, arg))
+                        self.do(actor.command, cmd, arg)
 
             yield from asyncio.sleep(0.01)
 
+    def do(self, fn, *args):
+        if asyncio.iscoroutinefunction(fn):
+            asyncio.async(fn(*args), loop=self.loop)
+        else:
+            self.loop.call_soon(functools.partial(fn, *args))
+
     def run(self):
-        app = http_server.get_app(self.context)
         self.loop = asyncio.get_event_loop()
         self.context.loop = self.loop
         self.coroutines = []
@@ -215,7 +233,7 @@ class Main(object):
             self.coroutines.append(asyncio.async(actor.loop(), loop=self.loop))
 
         try:
-            srv = self.loop.create_server(app.make_handler(), host='0.0.0.0', port=self.config['server']['port'])
+            srv = http_server.get_app(self.context, self.config, self.loop)
             asyncio.async(srv, loop=self.loop)
             self.loop.run_forever()
         finally:

@@ -17,7 +17,6 @@ class Context(object):
         self.items = Items()
         self.actuators = {}
         self.rules = []
-        self.listeners = []
         self.commands = collections.deque()
         self.loop = None
         self.callbacks = {}
@@ -29,7 +28,7 @@ class Context(object):
             self.loop.call_soon(functools.partial(fn, *args))
 
     def add_cb(self, name, cb):
-        self.callbacks[name] = cb
+        self.callbacks.setdefault(name, []).append(cb)
 
     def command(self, name, cmd):
         item = self.items.get_item(name)
@@ -51,14 +50,10 @@ class Context(object):
     def set_item_value(self, name, value):
         t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)
-        cb = self.callbacks.get('oncheck')
-        if cb and item:
-            self.do(cb, item)
+        self.run_cb('oncheck', item)
         if t:
             oldv, newv = t
-            cb = self.callbacks.get('onchange')
-            if cb:
-                self.do(cb, name, oldv, newv, time.time())
+            self.run_cb('onchange', name, oldv, newv, time.time())
 
     def add_delayed(self, seconds, fn):
         if self.loop:
@@ -69,3 +64,8 @@ class Context(object):
         LOG.info('remove delayed %s', d)
         if d:
             d.cancel()
+
+    def run_cb(self, name, *args):
+        for cb in self.callbacks.get(name, []):
+            if cb:
+                self.do(cb, *args)

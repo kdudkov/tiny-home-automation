@@ -42,7 +42,6 @@ class Main(object):
         self.config = {'server': {'port': 8880}}
 
         self.context = Context()
-        self.context.add_cb('oncheck', self.on_item_check)
         self.context.add_cb('onchange', self.on_item_change)
 
         self.load_config()
@@ -179,12 +178,6 @@ class Main(object):
                         LOG.exception('cron worker')
 
             yield from asyncio.sleep(30)
-
-    @asyncio.coroutine
-    def on_item_check(self, item):
-        arg = json.dumps(item.to_dict())
-        for lsnr in self.context.listeners:
-            self.do(lsnr, arg)
 
     @asyncio.coroutine
     def on_item_change(self, name, old_val, val, time):

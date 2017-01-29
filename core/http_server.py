@@ -13,15 +13,21 @@ class WebSocket(web.View):
     @asyncio.coroutine
     def get(self):
         ws = web.WebSocketResponse()
+        h = hash(ws)
         yield from ws.prepare(self.request)
         LOG.info('ws client connected, %s clients', len(self.request.app['websockets']) + 1)
-        self.request.app['websockets'].append(ws)
+        self.request.app['websockets'][h] = {'ws': ws, 'tag': ''}
 
         try:
             while 1:
                 msg = yield from ws.receive_str()
-                name, cmd = msg.split(';')
-                self.request.app.context.command(name, cmd)
+                if ';' in msg:
+                    tag, name, cmd = msg.split(';')
+                    self.request.app['websockets'][h]['tag'] = tag
+                    self.request.app.context.command(name, cmd)
+                else:
+                    self.request.app['websockets'][h]['tag'] = msg
+                    LOG.info('got tag %s for %s', msg, h)
                 LOG.debug('ws msg: %s', msg)
                 yield from asyncio.sleep(0.01)
         finally:
@@ -30,7 +36,7 @@ class WebSocket(web.View):
                     ws.close()
                 except:
                     pass
-            self.request.app['websockets'].remove(ws)
+            del(self.request.app['websockets'][h])
             LOG.debug('websocket connection closed')
         return ws
 
@@ -39,7 +45,7 @@ class Server(web.Application):
     context = None
 
     def init(self):
-        self['websockets'] = []
+        self['websockets'] = {}
         self.router.add_static('/static/', os.path.join(BASE_PATH, 'static'), name='static')
         self.router.add_route('GET', '/ws', WebSocket, name='chat')
         self.router.add_route('GET', '/', self.index)
@@ -106,17 +112,19 @@ class Server(web.Application):
         return self.json_resp(item.to_dict())
 
     @asyncio.coroutine
-    def on_change(self, s):
-        for ws in self['websockets']:
-            try:
-                yield from ws.send_str(s)
-            except:
-                pass
+    def on_check(self, item):
+        s = json.dumps(item.to_dict())
+        for ws in self['websockets'].values():
+            if ws['tag'] and ws['tag'] in item.tags:
+                try:
+                    yield from ws['ws'].send_str(s)
+                except:
+                    pass
 
 
 def get_app(context, config, loop):
     s = Server()
     s.context = context
     s.init()
-    context.listeners.append(s.on_change)
+    context.add_cb('oncheck', s.on_check)
     return s.get_app(config, loop)

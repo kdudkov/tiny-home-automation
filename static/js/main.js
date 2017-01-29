@@ -50,11 +50,12 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
                         t.push(x);
                     });
                     $scope.tags = t;
-                            $scope.tags.sort();
-                            $scope.error_text = '';
-                            if (! ws)
-                                $timeout(get_data, reload_time);
-                        }
+                    $scope.tags.sort();
+                    $scope.error_text = '';
+                    if (! ws)
+                        $timeout(get_data, reload_time);
+                    $scope.set_tag($scope.tags[0]);
+                    }
                 )
                 .error(function () {
                     $log.error('error getting data');
@@ -121,7 +122,7 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
 
     $scope.send = function(item, val) {
         if (ws) {
-            socket.send(item.name + ';' + val)
+            socket.send($scope.current_tag + ';' + item.name + ';' + val)
         } else {
             $http.post(cmd_url + item.name, val)
                     .success(function (data) {
@@ -137,6 +138,8 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
     $scope.set_tag = function (tag) {
         $log.info("set tag " + tag);
         $scope.current_tag = tag;
+        if (ws)
+            socket.send(tag);
     };
 
     $scope.has_tag = function (item) {

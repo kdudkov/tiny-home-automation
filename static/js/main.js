@@ -3,7 +3,12 @@ var json_url = '/items/';
 var cmd_url = '/item/';
 var reload_time = 5000;
 var ws_reconnect_time = 5000;
-var ws_url = 'ws://' + window.location.host + '/ws';
+var proto = 'ws://';
+
+if (window.location.protocol == 'https:')
+    proto = 'wss://'
+
+var ws_url = proto + window.location.host + '/ws';
 var ws = true;
 
 app = angular.module('app', []);

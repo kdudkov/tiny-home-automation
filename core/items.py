@@ -58,11 +58,33 @@ class Items(object):
         return self.as_list()
 
 
+def read_item(d):
+    item = None
+    if d['type'] == 'switch':
+        item = SwitchItem(d['name'])
+    if d['type'] == 'number':
+        item = NumberItem(d['name'])
+    if d['type'] == 'text':
+        item = TextItem(d['name'])
+    if d['type'] == 'date':
+        item = DateItem(d['name'])
+    if item:
+        item.config = d
+        item.input = d.get('input')
+        item.output = d.get('output')
+        item.ttl = d.get('ttl', 0)
+        item.ui = bool(d.get('ui', False))
+        item.tags = d.get('tags', [])
+        if 'default' in d:
+            item.set_value(d['default'])
+    return item
+
+
 class Item(object):
     input = None
     output = None
     ttl = 0
-    read_only = False
+    ui = False
     tags = []
     config = {}
 
@@ -95,7 +117,7 @@ class Item(object):
                 'tags': self.tags,
                 'formatted': self.formatted,
                 'h_name': self.h_name,
-                'ui': self.ui
+                'ui': self.ui,
                 }
 
     def is_value(self, st, for_time=1.0):
@@ -145,7 +167,7 @@ class Item(object):
             if frm in dir(functions):
                 return getattr(functions, frm)(self.value)
             else:
-                return frm % self.value
+                return frm.format(self.value)
         else:
             return self.value
 

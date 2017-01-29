@@ -136,24 +136,8 @@ class Main(object):
 
         n = 0
         for item in conf:
-            s = None
-            if item['type'] == 'switch':
-                s = SwitchItem(item['name'])
-            if item['type'] == 'number':
-                s = NumberItem(item['name'])
-            if item['type'] == 'text':
-                s = TextItem(item['name'])
-            if item['type'] == 'date':
-                s = DateItem(item['name'])
+            s = read_item(item)
             if s:
-                s.config = item
-                s.input = item.get('input')
-                s.output = item.get('output')
-                s.ttl = item.get('ttl', 0)
-                s.ui = bool(item.get('ui', False))
-                s.tags = item.get('tags', [])
-                if 'default' in item:
-                    s.set_value(item['default'])
                 self.context.items.add_item(s)
                 n += 1
         LOG.info('load %s items from config %s', n, fname)

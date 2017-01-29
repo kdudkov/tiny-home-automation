@@ -9,19 +9,19 @@
 
 - name: sun_az
   h_name: 'sun azimuth'
-  format: '%.0f'
+  format: '{:.0f}'
   type: number
   tags: [astro]
 
 - name: sun_alt
   h_name: 'sun altitude'
-  format: '%.0f'
+  format: '{:.0f}'
   type: number
   tags: [astro]
 
 - name: moon_phase
   h_name: 'moon phase'
-  format: '%.0f'
+  format: '{:.0f}'
   type: number
   tags: [astro]
 

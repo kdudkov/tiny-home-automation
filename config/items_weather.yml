@@ -3,7 +3,6 @@
   input: mqtt:home/weather/shum/temperature
   ttl: 300
   format: '{:.1f} °C'
-  decimals: 1
   tags: [temperature, out, weather]
 
 - name: weather_pressure
@@ -11,7 +10,6 @@
   input: mqtt:home/weather/shum/pressure
   ttl: 300
   format: '{:.1f} mbar'
-  decimals: 1
   tags: [out, weather]
 
 - name: weather_wind
@@ -19,7 +17,6 @@
   input: mqtt:home/weather/shum/windSpeed
   ttl: 300
   format: '{:.1f} м/с'
-  decimals: 1
   tags: [out, weather]
 
 - name: weather_precip
@@ -28,5 +25,4 @@
   input: mqtt:home/weather/shum/precipIntensity
   ttl: 300
   format: '{:.2f} мм/ч'
-  decimals: 1
   tags: [out, weather]

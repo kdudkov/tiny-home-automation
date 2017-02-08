@@ -11,12 +11,14 @@
   h_name: 'sun azimuth'
   format: '{:.0f}'
   type: number
+  decimals: 1
   tags: [astro]
 
 - name: sun_alt
   h_name: 'sun altitude'
   format: '{:.0f}'
   type: number
+  decimals: 1
   tags: [astro]
 
 - name: moon_phase

@@ -78,6 +78,9 @@ class MqttActor(AbstractActor):
         for t in self.context.items:
             if t.input == 'mqtt:%s' % topic:
                 self.context.set_item_value(t['name'], value)
+            elif t.input == 'mqtt:%s:click' % topic:
+                v = self.context.get_item_value(t['name'])
+                self.context.set_item_value(t['name'], 'Off' if v == 'On' else 'On')
 
     def is_my_command(self, cmd, arg):
         return cmd.startswith('mqtt:')

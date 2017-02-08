@@ -47,6 +47,10 @@ class Context(object):
         rule.context = self
         self.rules.append(rule)
 
+    def get_item_value(self, name):
+        item = self.items.get_item(name)
+        return item.value if item is not None else None
+
     def set_item_value(self, name, value):
         t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)

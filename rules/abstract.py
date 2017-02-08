@@ -23,8 +23,7 @@ class Rule(object):
         self.context.set_item_value(item_name, value)
 
     def get_val_or_none(self, name):
-        item = self.context.items.get_item(name)
-        return item.value if item else None
+        return self.context.get_item_value(name)
 
     def command(self, name, cmd):
         self.context.command(name, cmd)

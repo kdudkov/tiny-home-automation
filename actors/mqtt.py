@@ -70,10 +70,10 @@ class MqttActor(AbstractActor):
 
     def check_topic(self, topic, value):
         LOG.debug('got topic %s, message %s', topic, value)
-        if topic == self.config['mqtt'].get('in_topic'):
-            if value and ':' in value:
-                cmd, data = value.split(':', 1)
-                self.context.command(cmd, data)
+        if topic.startswith(self.config['mqtt'].get('in_topic')):
+            cmd = topic.split('/')[-1]
+            if value:
+                self.context.command(cmd, value)
                 return
         for t in self.context.items:
             if t.input == 'mqtt:%s' % topic:
@@ -84,6 +84,12 @@ class MqttActor(AbstractActor):
 
     def is_my_command(self, cmd, arg):
         return cmd.startswith('mqtt:')
+
+    @asyncio.coroutine
+    def send_out(self, name, old, new_, time):
+        topic = self.config['mqtt'].get('out_topic')
+        if topic:
+            yield from self.mqtt_client.publish(topic.format(name), str(new_).encode('UTF-8'), 0)
 
     @asyncio.coroutine
     def command(self, cmd, arg):

@@ -73,6 +73,7 @@ class MqttActor(AbstractActor):
         if topic.startswith(self.config['mqtt'].get('in_topic')):
             cmd = topic.split('/')[-1]
             if value:
+                LOG.info('got command %s %s', cmd, value)
                 self.context.command(cmd, value)
                 return
         for t in self.context.items:

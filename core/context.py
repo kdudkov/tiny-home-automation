@@ -37,7 +37,7 @@ class Context(object):
                 self.commands.append((item.config.get('output'), cmd))
             else:
                 LOG.info('directly set %s to %s', name, cmd)
-                self.set_item_value(name, cmd)
+                self.set_item_value(name, cmd, True)
         else:
             LOG.info('external command %s', name)
             self.commands.append((name, cmd))
@@ -51,12 +51,15 @@ class Context(object):
         item = self.items.get_item(name)
         return item.value if item is not None else None
 
-    def set_item_value(self, name, value):
+    def set_item_value(self, name, value, force=False):
         t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)
         self.run_cb('oncheck', item)
         if t:
             oldv, newv = t
+            self.run_cb('onchange', name, oldv, newv, time.time())
+        elif force:
+            oldv, newv = value, value
             self.run_cb('onchange', name, oldv, newv, time.time())
 
     def add_delayed(self, seconds, fn):

@@ -52,7 +52,7 @@ class Main(object):
         self.actors = [mqtt_act, AstroActor()]
 
         if self.config['mqtt'].get('out_topic'):
-            self.context.add_cb('onchange', mqtt_act.send_out)
+            self.context.add_cb('oncheck', mqtt_act.send_out)
 
         if 'modbus' in self.config:
             LOG.info('add modbus actor host %s', self.config['modbus']['host'])

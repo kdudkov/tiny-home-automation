@@ -4,6 +4,8 @@ coords: {lat: 59.5, lon: 30.19}
 mqtt:
   url: mqtt://192.168.0.1
   in_topic: home/command
+  out_topic: mahno/item/{}
+  min_send_time: 30
 
 server:
   port: 8880

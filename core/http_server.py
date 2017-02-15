@@ -112,7 +112,7 @@ class Server(web.Application):
         return self.json_resp(item.to_dict())
 
     @asyncio.coroutine
-    def on_check(self, item):
+    def on_check(self, item, changed):
         s = json.dumps(item.to_dict())
         for ws in self['websockets'].values():
             if ws['tag'] and ws['tag'] in item.tags:

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 import hbmqtt.client
 
@@ -11,6 +12,7 @@ LOG = logging.getLogger(__name__)
 class MqttActor(AbstractActor):
     def __init__(self):
         self.mqtt_client = None
+        self.send_time = {}
 
     def init(self, config, context):
         self.config = config
@@ -87,10 +89,15 @@ class MqttActor(AbstractActor):
         return cmd.startswith('mqtt:')
 
     @asyncio.coroutine
-    def send_out(self, name, old, new_, time):
+    def send_out(self, item, changed):
+        t = self.send_time.get(item.name, 0)
+        if time.time() - t < self.config['mqtt'].get('min_send_time', 30) and not changed:
+            return
+        self.send_time[item.name] = time.time()
         topic = self.config['mqtt'].get('out_topic')
         if topic:
-            yield from self.mqtt_client.publish(topic.format(name), str(new_).encode('UTF-8'), 0)
+            yield from self.mqtt_client.publish(topic.format(item.name), str(item.value).encode('UTF-8'),
+                                                1 if changed else 0)
 
     @asyncio.coroutine
     def command(self, cmd, arg):

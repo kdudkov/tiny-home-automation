@@ -5,6 +5,7 @@ mqtt:
   url: mqtt://192.168.0.1
   in_topic: mahno/command
   out_topic: mahno/item/{}
+  min_send_time: 30
 
 server:
   port: 8880

@@ -54,7 +54,7 @@ class Context(object):
     def set_item_value(self, name, value, force=False):
         t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)
-        self.run_cb('oncheck', item)
+        self.run_cb('oncheck', item, t is not None)
         if t:
             oldv, newv = t
             self.run_cb('onchange', name, oldv, newv, time.time())

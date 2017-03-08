@@ -12,6 +12,9 @@ LOG = logging.getLogger(__name__)
 
 THRESHOLD = 48 * 60 * 60
 
+ON = 'On'
+OFF = 'Off'
+
 
 class Items(object):
     def __init__(self):
@@ -192,7 +195,7 @@ class NumberItem(Item):
 
 class SwitchItem(Item):
     def convert_value(self, val):
-        return 'On' if str(val).lower() in ('on', 'true', '1', 'open') else 'Off'
+        return ON if str(val).lower() in ('on', 'true', '1', 'open') else OFF
 
 
 class DateItem(Item):

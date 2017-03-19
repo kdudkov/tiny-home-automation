@@ -146,7 +146,7 @@ class Item(object):
     def set_value(self, value):
         val = self.convert_value(value)
         self.checked = time.time()
-        if self._value != val:
+        if val is not None and self._value != val:
             LOG.info('%s changed from %s to %s', self.name, self._value, val)
             self._value = val
             self.changed = time.time()
@@ -195,7 +195,18 @@ class NumberItem(Item):
 
 class SwitchItem(Item):
     def convert_value(self, val):
+        if str(val).lower() in ('click', 'switch'):
+            return ON if self._value == OFF else OFF
         return ON if str(val).lower() in ('on', 'true', '1', 'open') else OFF
+
+
+class MultiSwitchItem(Item):
+    def convert_value(self, val):
+        nv = str(val).lower()
+        for v in self.config['values']:
+            if v.lower() == nv:
+                return v
+        return None
 
 
 class DateItem(Item):

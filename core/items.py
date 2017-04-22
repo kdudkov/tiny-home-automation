@@ -71,6 +71,8 @@ def read_item(d):
         item = TextItem(d['name'])
     if d['type'] == 'date':
         item = DateItem(d['name'])
+    if d['type'] == 'select':
+        item = SelectItem(d['name'])
     if item:
         item.config = d
         item.input = d.get('input')
@@ -200,10 +202,10 @@ class SwitchItem(Item):
         return ON if str(val).lower() in ('on', 'true', '1', 'open') else OFF
 
 
-class MultiSwitchItem(Item):
+class SelectItem(Item):
     def convert_value(self, val):
         nv = str(val).lower()
-        for v in self.config['values']:
+        for v in self.config['choices']:
             if v.lower() == nv:
                 return v
         return None

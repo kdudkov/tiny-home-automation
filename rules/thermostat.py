@@ -1,7 +1,9 @@
 import asyncio
 import logging
+
 import time
 
+from core.items import ON, OFF
 from . import abstract
 
 LOG = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ class AbstractThermostat(abstract.Rule):
 
     @asyncio.coroutine
     def process(self, name, old_val, val):
-        if self.get_val_or_none(self.switch_item) != 'On':
+        if self.get_val_or_none(self.switch_item) != ON:
             return
 
         t = self.get_val_or_none(self.temp_item)
@@ -30,7 +32,7 @@ class AbstractThermostat(abstract.Rule):
 
         if t is None or t_d is None:
             LOG.error('emergency: temp sensor %s or thermostat %s value is None', self.temp_item, self.thermostat_item)
-            self.command(self.actor_item, 'Off')
+            self.item_command(self.actor_item, OFF)
             return
 
         if time.time() - self.last_switch < self.timeout:
@@ -39,18 +41,18 @@ class AbstractThermostat(abstract.Rule):
 
         LOG.debug('temp %s, target %s, switch %s', t, t_d, self.get_val_or_none(self.actor_item))
         if t >= t_d + self.gist / 2:
-            target_sw = 'On' if self.is_cooler else 'Off'
+            target_sw = ON if self.is_cooler else OFF
             if self.get_val_or_none(self.actor_item) != target_sw:
                 self.last_switch = time.time()
                 LOG.info('too hot (%s), setting %s to %s', t, self.actor_item, target_sw)
-                self.command(self.actor_item, target_sw)
+                self.item_command(self.actor_item, target_sw)
 
         if t <= t_d - self.gist / 2:
-            target_sw = 'Off' if self.is_cooler else 'On'
+            target_sw = OFF if self.is_cooler else ON
             if self.get_val_or_none(self.actor_item) != target_sw:
                 self.last_switch = time.time()
                 LOG.info('too cold (%s), setting %s to %s', t, self.actor_item, target_sw)
-                self.command(self.actor_item, target_sw)
+                self.item_command(self.actor_item, target_sw)
 
 
 class RoomThermostat(AbstractThermostat):

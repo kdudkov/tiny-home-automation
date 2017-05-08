@@ -4,6 +4,7 @@ import asyncio
 import logging
 
 import aiohttp
+
 from . import AbstractActor
 
 LOG = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class Kankun(object):
                 return r
 
     @asyncio.coroutine
-    def command(self, c):
+    def post_command(self, c):
         cmd = ['off', 'on'][str(c).lower() in ('on', 'true', '1')]
         yield from self.req({'set': cmd})
 
@@ -79,5 +80,4 @@ class KankunActor(AbstractActor):
 
     @asyncio.coroutine
     def command(self, cmd, arg):
-        yield from self.switch.command(arg)
-
+        yield from self.switch.post_command(arg)

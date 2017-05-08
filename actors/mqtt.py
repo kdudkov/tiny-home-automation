@@ -1,10 +1,9 @@
 import asyncio
 import logging
-import time
 
 import hbmqtt.client
+import time
 
-from core.items import ON, OFF
 from . import AbstractActor
 
 LOG = logging.getLogger(__name__)
@@ -73,12 +72,16 @@ class MqttActor(AbstractActor):
 
     def check_topic(self, topic, value):
         LOG.debug('got topic %s, message %s', topic, value)
+
+        # common topic for item commands
         if topic.startswith(self.config['mqtt'].get('in_topic')):
             cmd = topic.split('/')[-1]
             if value:
                 LOG.info('got command %s %s', cmd, value)
-                self.context.command(cmd, value)
+                self.context.item_command(cmd, value)
                 return
+
+        # items input topic
         for t in self.context.items:
             if t.input == 'mqtt:%s' % topic:
                 self.context.set_item_value(t['name'], value, True)

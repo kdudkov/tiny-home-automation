@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import time
 from datetime import datetime, date
 from operator import attrgetter
+
+import time
 
 from core import functions
 
@@ -189,9 +190,11 @@ class TextItem(Item):
 class NumberItem(Item):
     def convert_value(self, val):
         v = float(val)
+
         if self.config.get('decimals'):
             n = pow(10, self.config['decimals'])
             v = int(v * n) / n
+
         return v
 
 

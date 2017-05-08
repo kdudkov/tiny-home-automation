@@ -10,9 +10,9 @@ import logging.handlers
 import os
 import pickle
 import signal
-import sys
 import traceback
 
+import sys
 import yaml
 
 from actors.astro import AstroActor
@@ -99,13 +99,16 @@ class Main(object):
         if not os.path.isfile(fn):
             LOG.info('no dump file')
             return
+
         LOG.info('loading state from dump')
+
         with open(fn, 'rb') as f:
             dump = pickle.load(f)
+
         for st in dump:
             s = self.context.items.get_item(st['name'])
             if s:
-                s._value = st['value']
+                s._value = s.convert_value(st['value'])
                 s.changed = st['changed']
                 s.checked = st['checked']
                 # s.ttl = st.get('ttl', 0)

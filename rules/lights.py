@@ -25,7 +25,7 @@ class BtnRule(abstract.Rule):
     @asyncio.coroutine
     def process(self, name, old_val, val):
         v = self.get_val_or_none('light_room')
-        self.command('light_room', ON if v == OFF else OFF)
+        self.item_command('light_room', ON if v == OFF else OFF)
 
 
 class NightCorridorRule(abstract.Rule):
@@ -34,7 +34,7 @@ class NightCorridorRule(abstract.Rule):
     @asyncio.coroutine
     def process(self, name, old_val, val):
         if val == OFF and self.time_between('22:00', '4:00'):
-            self.command('light_corridor_night', ON)
+            self.item_command('light_corridor_night', ON)
 
         if val == ON:
             self.command('light_corridor_night', OFF)
@@ -48,7 +48,7 @@ class NightMode(abstract.Rule):
     @asyncio.coroutine
     def process(self, name, old_val, val):
         if val == 'night':
-            self.command('light_room', OFF)
-            self.command('light_corridor', OFF)
-            self.command('light_corridor_night', ON)
-            self.command('room_thermostat', ON)
+            self.item_command('light_room', OFF)
+            self.item_command('light_corridor', OFF)
+            self.item_command('light_corridor_night', ON)
+            self.item_command('room_thermostat', ON)

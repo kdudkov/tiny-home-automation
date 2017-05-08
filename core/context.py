@@ -2,6 +2,7 @@ import asyncio
 import collections
 import functools
 import logging
+
 import time
 
 from rules.abstract import Rule
@@ -31,16 +32,25 @@ class Context(object):
         self.callbacks.setdefault(name, []).append(cb)
 
     def command(self, name, cmd):
+        LOG.info('external command %s', name)
+        self.commands.append((name, cmd))
+
+    def item_command(self, name, cmd):
         item = self.items.get_item(name)
-        if item:
-            if item.config.get('output'):
-                self.commands.append((item.config.get('output'), cmd))
-            else:
-                LOG.info('directly set %s to %s', name, cmd)
-                self.set_item_value(name, cmd, True)
+
+        if not item:
+            LOG.error('no item %s', name)
+            return
+
+        if item.config.get('output'):
+            self.commands.append((item.config.get('output'), cmd))
+
+            if item.config.get('fast_change'):
+                LOG.info('fast change set %s to %s', name, cmd)
+                self.set_item_value(name, cmd)
         else:
-            LOG.info('external command %s', name)
-            self.commands.append((name, cmd))
+            LOG.info('directly set %s to %s', name, cmd)
+            self.set_item_value(name, cmd, True)
 
     def add_rule(self, rule):
         assert isinstance(rule, Rule)
@@ -55,6 +65,7 @@ class Context(object):
         t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)
         self.run_cb('oncheck', item, t is not None)
+
         if t:
             oldv, newv = t
             self.run_cb('onchange', name, oldv, newv, time.time())

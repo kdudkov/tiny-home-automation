@@ -24,7 +24,7 @@ class WebSocket(web.View):
                 if ';' in msg:
                     tag, name, cmd = msg.split(';')
                     self.request.app['websockets'][h]['tag'] = tag
-                    self.request.app.context.command(name, cmd)
+                    self.request.app.context.item_command(name, cmd)
                 else:
                     self.request.app['websockets'][h]['tag'] = msg
                     LOG.info('got tag %s for %s', msg, h)
@@ -38,7 +38,6 @@ class WebSocket(web.View):
                     pass
             del(self.request.app['websockets'][h])
             LOG.debug('websocket connection closed')
-        return ws
 
 
 class Server(web.Application):
@@ -108,7 +107,7 @@ class Server(web.Application):
         if not item:
             return self.resp_404('')
         val = yield from request.content.read()
-        self.context.command(name, val.decode('utf-8'))
+        self.context.item_command(name, val.decode('utf-8'))
         return self.json_resp(item.to_dict())
 
     @asyncio.coroutine

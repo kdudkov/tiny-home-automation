@@ -28,6 +28,9 @@ class Rule(object):
     def command(self, name, cmd):
         self.context.command(name, cmd)
 
+    def item_command(self, name, cmd):
+        self.context.item_command(name, cmd)
+
     @asyncio.coroutine
     def try_process(self, name, old_val, val):
         try:

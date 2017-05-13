@@ -192,8 +192,12 @@ class NumberItem(Item):
         v = float(val)
 
         if self.config.get('decimals'):
-            n = pow(10, self.config['decimals'])
-            v = int(v * n) / n
+            d = self.config['decimals']
+            if d == 0:
+                return int(v)
+            else:
+                n = pow(10, self.config['decimals'])
+                return int(v * n) / float(n)
 
         return v
 
@@ -202,6 +206,7 @@ class SwitchItem(Item):
     def convert_value(self, val):
         if str(val).lower() in ('click', 'switch'):
             return ON if self._value == OFF else OFF
+
         return ON if str(val).lower() in ('on', 'true', '1', 'open') else OFF
 
 

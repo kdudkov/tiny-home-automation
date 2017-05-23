@@ -178,17 +178,6 @@ class Main(object):
                 asyncio.async(rule.try_process(name, old_val, val), loop=self.loop)
 
     @asyncio.coroutine
-    def updates_processor(self):
-        while self.running:
-            if self.context.changes:
-                name, old_val, val, time = self.context.changes.popleft()
-                for rule in self.context.rules:
-                    if name in rule.on_change:
-                        LOG.info('running rule %s on %s change', rule.__class__.__name__, name)
-                        asyncio.async(rule.try_process(name, old_val, val), loop=self.loop)
-            yield from asyncio.sleep(0.01)
-
-    @asyncio.coroutine
     def commands_processor(self):
         while self.running:
             if self.context.commands:
@@ -210,7 +199,7 @@ class Main(object):
         self.context.loop = self.loop
         self.coroutines = []
 
-        for s in [self.cron_checker(), self.updates_processor(), self.commands_processor()]:
+        for s in [self.cron_checker(), self.commands_processor()]:
             self.coroutines.append(asyncio.async(s, loop=self.loop))
 
         for actor in self.actors:

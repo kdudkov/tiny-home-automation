@@ -41,6 +41,10 @@ class Items(object):
         return None
 
     def set_item_value(self, name, value):
+        """
+        Return pair od old_val, new_val if value was changed, else None
+        """
+
         item = self.get_item(name)
         if not item:
             raise Exception('not found item %s' % name)

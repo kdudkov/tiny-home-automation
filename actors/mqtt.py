@@ -13,6 +13,7 @@ class MqttActor(AbstractActor):
     def __init__(self):
         self.mqtt_client = None
         self.send_time = {}
+        self.connected = False
 
     def init(self, config, context):
         self.config = config
@@ -22,10 +23,10 @@ class MqttActor(AbstractActor):
 
     @asyncio.coroutine
     def loop(self):
-        connected = False
+        self.connected = False
         while self.running:
             if not connected:
-                connected = yield from self.connect()
+                self.connected = yield from self.connect()
             try:
                 message = yield from self.mqtt_client.deliver_message()
                 packet = message.publish_packet
@@ -34,11 +35,11 @@ class MqttActor(AbstractActor):
                 self.check_topic(topic, value)
             except hbmqtt.client.ClientException as ce:
                 LOG.error('Client exception: %s' % ce)
-                connected = False
+                self.connected = False
             except Exception as e:
                 LOG.error('%s' % e)
-                connected = False
-            if not connected:
+                self.connected = False
+            if not self.connected:
                 yield from self.disconnect()
                 yield from asyncio.sleep(1)
         yield from self.disconnect()
@@ -88,6 +89,29 @@ class MqttActor(AbstractActor):
 
     def is_my_command(self, cmd, arg):
         return cmd.startswith('mqtt:')
+
+    @asyncio.coroutine
+    def periodical_sender(self):
+        while self.running:
+            for item in self.context.items:
+                while not self.connected:
+                    yield from asyncio.sleep(1)
+                    if not self.running:
+                        break
+
+                if not self.running:
+                    break
+
+                t = self.send_time.get(item.name, 0)
+                if time.time() - t <= self.config['mqtt'].get('send_time', 30):
+                    yield from asyncio.sleep(0.1)
+                    continue
+
+                self.send_time[item.name] = time.time()
+                topic = self.config['mqtt'].get('out_topic')
+                if topic:
+                    yield from self.mqtt_client.publish(topic.format(item.name), str(item.value).encode('UTF-8'), 1)
+                yield from asyncio.sleep(0.1)
 
     @asyncio.coroutine
     def send_out(self, item, changed):

@@ -8,6 +8,10 @@ import time
 from rules.abstract import Rule
 from .items import Items
 
+CB_ONCHANGE = 'onchange'
+
+CB_ONCHECK = 'oncheck'
+
 __author__ = 'madrider'
 
 LOG = logging.getLogger(__name__)
@@ -64,14 +68,14 @@ class Context(object):
     def set_item_value(self, name, value, force=False):
         t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)
-        self.run_cb('oncheck', item, t is not None)
+        self.run_cb(CB_ONCHECK, item, t is not None)
 
         if t:
             oldv, newv = t
-            self.run_cb('onchange', name, oldv, newv, time.time())
+            self.run_cb(CB_ONCHANGE, name, oldv, newv, time.time())
         elif force:
             oldv, newv = value, value
-            self.run_cb('onchange', name, oldv, newv, time.time())
+            self.run_cb(CB_ONCHANGE, name, oldv, newv, time.time())
 
     def add_delayed(self, seconds, fn):
         if self.loop:

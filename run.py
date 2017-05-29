@@ -13,6 +13,7 @@ import signal
 import traceback
 
 import sys
+import time
 import yaml
 
 from actors.astro import AstroActor
@@ -23,6 +24,7 @@ from actors.mqtt import MqttActor
 from core import Context
 from core import cron
 from core import http_server
+from core.context import CB_ONCHECK, CB_ONCHANGE
 from core.items import *
 from rules.abstract import Rule
 
@@ -42,33 +44,33 @@ class Main(object):
         self.config = {'server': {'port': 8880}}
 
         self.context = Context()
-        self.context.add_cb('onchange', self.on_item_change)
+        self.context.add_cb(CB_ONCHANGE, self.on_item_change)
 
         self.load_config()
 
         self.load_rules()
 
         mqtt_act = MqttActor()
-        self.actors = [mqtt_act, AstroActor()]
+        self.actors = {'mqtt': mqtt_act, 'astro': AstroActor()}
 
         if self.config['mqtt'].get('out_topic'):
-            self.context.add_cb('oncheck', mqtt_act.send_out)
+            self.context.add_cb(CB_ONCHECK, mqtt_act.send_out)
 
         if 'modbus' in self.config:
             LOG.info('add modbus actor host %s', self.config['modbus']['host'])
-            self.actors.append(ModbusActor(self.config['modbus']['host'], self.config['modbus']['port']))
+            self.actors['modbus'] = ModbusActor(self.config['modbus']['host'], self.config['modbus']['port'])
 
         if 'kodi' in self.config:
             for k, v in self.config['kodi'].items():
                 LOG.info('add kodi actor %s, addr %s', k, v)
-                self.actors.append(KodiActor(k, v))
+                self.actors['kodi_' + k] = KodiActor(k, v)
 
         if 'kankun' in self.config:
             for k, v in self.config['kankun'].items():
                 LOG.info('add kankun actor %s, addr %s', k, v)
-                self.actors.append(KankunActor(k, v))
+                self.actors['kankun' + k] = KankunActor(k, v)
 
-        for actor in self.actors:
+        for actor in self.actors.values():
             actor.init(self.config, self.context)
 
         try:
@@ -182,7 +184,7 @@ class Main(object):
         while self.running:
             if self.context.commands:
                 cmd, arg = self.context.commands.popleft()
-                for actor in self.actors:
+                for actor in self.actors.values():
                     if actor.is_my_command(cmd, arg):
                         self.do(actor.command, cmd, arg)
 
@@ -202,15 +204,18 @@ class Main(object):
         for s in [self.cron_checker(), self.commands_processor()]:
             self.coroutines.append(asyncio.async(s, loop=self.loop))
 
-        for actor in self.actors:
+        for actor in self.actors.values():
             self.coroutines.append(asyncio.async(actor.loop(), loop=self.loop))
+
+        if self.actors.get('mqtt') and self.config['mqtt'].get('out_topic'):
+            self.coroutines.append(asyncio.async(self.actors.get('mqtt').periodical_sender(), loop=self.loop))
 
         try:
             srv = http_server.get_app(self.context, self.config, self.loop)
             asyncio.async(srv, loop=self.loop)
             self.loop.run_forever()
         finally:
-            for actor in self.actors:
+            for actor in self.actors.values():
                 actor.stop()
             self.running = False
             asyncio.wait(self.coroutines)

@@ -5,9 +5,9 @@ import time
 
 from core.items import ON, OFF
 from . import abstract
-from core.items import ON, OFF
 
 LOG = logging.getLogger(__name__)
+
 
 class AbstractThermostat(abstract.Rule):
     timeout = 90
@@ -45,7 +45,7 @@ class AbstractThermostat(abstract.Rule):
 
         if t >= t_d + self.gist / 2:
             target_sw = ON if self.is_cooler else OFF
-        if t <= t_d - self.gist / 2:
+        elif t <= t_d - self.gist / 2:
             target_sw = OFF if self.is_cooler else ON
 
         if target_sw is not None and self.get_val_or_none(self.actor_item) != target_sw:

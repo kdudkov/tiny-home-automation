@@ -193,6 +193,9 @@ class TextItem(Item):
 
 class NumberItem(Item):
     def convert_value(self, val):
+        if val is None:
+            return None
+
         v = float(val)
 
         if self.config.get('decimals'):
@@ -233,6 +236,7 @@ class DateItem(Item):
     def formatted(self):
         if self.value is None:
             return None
+
         now = datetime.now()
         d = datetime.fromtimestamp(self.value)
         if now.date() == d.date():

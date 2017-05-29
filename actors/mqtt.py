@@ -25,7 +25,7 @@ class MqttActor(AbstractActor):
     def loop(self):
         self.connected = False
         while self.running:
-            if not connected:
+            if not self.connected:
                 self.connected = yield from self.connect()
             try:
                 message = yield from self.mqtt_client.deliver_message()

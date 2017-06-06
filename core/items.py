@@ -122,6 +122,7 @@ class Item(object):
                 'value': self.value,
                 '_value': self._value,
                 'age': self.age,
+                'check_age': self.check_age,
                 'checked': self.checked,
                 'changed': self.changed,
                 'tags': self.tags,
@@ -141,10 +142,15 @@ class Item(object):
             return -1
 
     @property
+    def check_age(self):
+        if self.checked:
+            return time.time() - self.checked
+        else:
+            return -1
+
+    @property
     def is_fresh(self):
-        if self.ttl and time.time() - self.checked > self.ttl:
-            return False
-        return True
+        return self.check_age != -1 and (self.ttl == 0 or self.check_age <= self.ttl)
 
     @property
     def value(self):

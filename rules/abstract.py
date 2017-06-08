@@ -8,6 +8,7 @@ LOG = logging.getLogger(__name__)
 class Rule(object):
     on_change = []
     on_time = ''
+    signals = []
     context = None
 
     def add_delayed(self, seconds, fn):
@@ -41,7 +42,20 @@ class Rule(object):
         except:
             LOG.exception('error in rule %s', self.__class__.__name__)
 
+    @asyncio.coroutine
+    def try_process_signal(self, topic, val):
+        try:
+            if asyncio.iscoroutinefunction(self.process):
+                yield from self.process_signal(topic, val)
+            else:
+                self.process_signal(topic, val)
+        except:
+            LOG.exception('error in rule %s', self.__class__.__name__)
+
     def process(self, name, old_val, val):
+        pass
+
+    def process_signal(self, topiv, val):
         pass
 
     @staticmethod

@@ -9,6 +9,26 @@ from . import AbstractActor
 LOG = logging.getLogger(__name__)
 
 
+def match_topic(mask, topic):
+    mask_parts = mask.split('/')
+    topic_parts = topic.split('/')
+
+    if mask_parts[0] == '#':
+        return True
+
+    if len(topic_parts) < len(mask_parts):
+        return False
+
+    for m, t in zip(mask_parts, topic_parts):
+        if m == '+':
+            continue
+        if m == '#':
+            return True
+        if t != m:
+            return False
+    return True
+
+
 class MqttActor(AbstractActor):
     def __init__(self):
         self.mqtt_client = None
@@ -86,6 +106,13 @@ class MqttActor(AbstractActor):
         for t in self.context.items:
             if t.input == 'mqtt:%s' % topic:
                 self.context.set_item_value(t['name'], value)
+
+        # signals
+        for rule in self.context.rules:
+            for mask in rule.signals:
+                if match_topic(mask, topic):
+                    LOG.info('running rule %s on signal %s', rule.__class__.__name__, topic)
+                    asyncio.async(rule.try_process_signal(topic, value), loop=self.context.loop)
 
     def is_my_command(self, cmd, arg):
         return cmd.startswith('mqtt:')

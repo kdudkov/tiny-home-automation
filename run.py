@@ -10,10 +10,9 @@ import logging.handlers
 import os
 import pickle
 import signal
+import sys
 import traceback
 
-import sys
-import time
 import yaml
 
 from actors.astro import AstroActor
@@ -154,14 +153,17 @@ class Main(object):
     @asyncio.coroutine
     def cron_checker(self):
         minute = 0
+
         while self.running:
             new_m = int(time.time() / 60)
+
             if minute != new_m:
                 LOG.debug('check cron')
                 minute = new_m
                 dump = self.context.items.as_list()
                 json.dump(dump, open('items.json', 'w'), indent=4)
                 dt = time.time()
+
                 for rule in self.context.rules:
                     try:
                         if rule.on_time and cron.check_cron_value(rule.on_time, dt):

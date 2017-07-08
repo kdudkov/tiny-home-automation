@@ -137,7 +137,7 @@ class MqttActor(AbstractActor):
                 self.send_time[item.name] = time.time()
                 topic = self.config['mqtt'].get('out_topic')
                 if topic:
-                    val = str(item.value).encode('UTF-8') if item.value is not None else None
+                    val = str(item.value).encode('UTF-8') if item.value is not None else bytes()
                     yield from self.mqtt_client.publish(topic.format(item.name), val, 1)
                 yield from asyncio.sleep(0.1)
 

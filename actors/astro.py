@@ -2,8 +2,9 @@ import asyncio
 import logging
 import math
 
-from actors import AbstractActor
 from astral import Location
+
+from actors import AbstractActor
 
 LOG = logging.getLogger(__name__)
 
@@ -12,7 +13,6 @@ deg = lambda x: x * 180 / math.pi
 
 
 class AstroActor(AbstractActor):
-
     def init(self, config, context):
         self.config = config
         self.context = context

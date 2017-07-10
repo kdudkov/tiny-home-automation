@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import time
 from datetime import datetime, date
 from operator import attrgetter
-
-import time
 
 from core import functions
 

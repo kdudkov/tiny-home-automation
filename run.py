@@ -11,6 +11,7 @@ import os
 import pickle
 import signal
 import sys
+import time
 import traceback
 
 import yaml
@@ -24,7 +25,7 @@ from core import Context
 from core import cron
 from core import http_server
 from core.context import CB_ONCHECK, CB_ONCHANGE
-from core.items import *
+from core.items import read_item
 from rules.abstract import Rule
 
 LOG = logging.getLogger(__name__)

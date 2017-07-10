@@ -156,7 +156,6 @@ class ModbusActor(AbstractActor):
         try:
             writer.write(bytes(msg.to_list()))
             yield from writer.drain()
-            n = []
             data = yield from reader.read(256)
             return TcpMessage.decode_tcp(data)
         except Exception as e:

@@ -35,7 +35,7 @@ class Kodi(object):
             raise Exception('http %s' % resp.status)
         try:
             res = yield from resp.json()
-            if not 'result' in res:
+            if 'result' not in res:
                 print(res)
                 raise Exception('error')
             return res['result']

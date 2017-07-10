@@ -1,6 +1,5 @@
 import asyncio
 import logging
-
 import time
 
 from core.items import ON, OFF
@@ -53,6 +52,7 @@ class AbstractThermostat(abstract.Rule):
             LOG.info('value is %s, range is %s - %s, setting %s to %s', t, t_d - self.gist / 2, t_d + self.gist / 2,
                      self.actor_item, target_sw)
             self.item_command(self.actor_item, target_sw)
+
 
 class RoomThermostat(AbstractThermostat):
     def __init__(self):

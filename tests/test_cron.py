@@ -23,6 +23,6 @@ def test_check_cron_value():
     assert cron.check_cron_value('* * * * 2', dt) is False
     assert cron.check_cron_value('* * 6 * 3', dt) is False
     assert cron.check_cron_value('* * * 10 4', dt) is False
-    assert cron.check_cron_value('* * * 10 1-3', dt) is False
+    assert cron.check_cron_value('* * * 10 1-2', dt) is False
     assert cron.check_cron_value('*/3 * * * *', dt) is False
     assert cron.check_cron_value('*/8 * * * *', dt) is False

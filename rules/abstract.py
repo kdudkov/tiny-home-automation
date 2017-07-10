@@ -73,4 +73,3 @@ class Rule(object):
             return m1 <= m <= m2
         else:
             return m > m1 or m < m2
-

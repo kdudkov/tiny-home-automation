@@ -27,7 +27,7 @@ def test_val(c, v):
     values = get_values(c)
 
     for val in values:
-        if '/' in val:
+        if '/' in str(val):
             _, n = val.split('/')
             if int(v) % int(n) == 0:
                 return True

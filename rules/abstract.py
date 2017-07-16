@@ -55,7 +55,7 @@ class Rule(object):
     def process(self, name, old_val, val):
         pass
 
-    def process_signal(self, topiv, val):
+    def process_signal(self, topic, val):
         pass
 
     @staticmethod

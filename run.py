@@ -167,7 +167,7 @@ class Main(object):
 
                 for rule in self.context.rules:
                     try:
-                        if rule.on_time and cron.check_cron_value(rule.on_time, dt):
+                        if rule.on_time and cron.check_cron_values(rule.on_time, dt):
                             LOG.info('running rule %s on cron %s', rule.__class__.__name__, rule.on_time)
                             asyncio.async(rule.try_process(cron.name, None, dt), loop=self.loop)
                     except:

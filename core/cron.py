@@ -3,6 +3,18 @@ from datetime import datetime
 name = '*cron*'
 
 
+def check_cron_values(val, dt):
+    a = []
+    if isinstance(val, (tuple, list)):
+        for v in val:
+            if check_cron_value(v, dt):
+                return True
+        return False
+
+    if isinstance(val, str):
+        return check_cron_value(a, dt)
+
+
 def check_cron_value(val, dt):
     a = []
     if isinstance(val, (dict, list)):

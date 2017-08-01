@@ -15,10 +15,7 @@ class Rule(object):
         return self.context.add_delayed(seconds, fn)
 
     def remove_delayed(self, d):
-        if d:
-            LOG.info('remove delayed')
-            d.cancel()
-        return None
+        return self.context.remove_delayed(d)
 
     def post_update(self, item_name, value):
         self.context.set_item_value(item_name, value)

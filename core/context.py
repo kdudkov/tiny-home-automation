@@ -2,17 +2,13 @@ import asyncio
 import collections
 import functools
 import logging
-
 import time
 
 from rules.abstract import Rule
 from .items import Items
 
 CB_ONCHANGE = 'onchange'
-
 CB_ONCHECK = 'oncheck'
-
-__author__ = 'madrider'
 
 LOG = logging.getLogger(__name__)
 
@@ -82,7 +78,8 @@ class Context(object):
             t = self.loop.time() + seconds
             return self.loop.call_at(t, fn)
 
-    def remove_delayed(self, d):
+    @staticmethod
+    def remove_delayed(d):
         LOG.info('remove delayed %s', d)
         if d:
             d.cancel()

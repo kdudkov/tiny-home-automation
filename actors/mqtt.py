@@ -109,7 +109,7 @@ class MqttActor(AbstractActor):
 
         # signals
         for rule in self.context.rules:
-            for mask in rule.signals:
+            for mask in rule.on_signal:
                 if match_topic(mask, topic):
                     LOG.info('running rule %s on signal %s', rule.__class__.__name__, topic)
                     asyncio.async(rule.try_process_signal(topic, value), loop=self.context.loop)

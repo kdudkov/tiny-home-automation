@@ -8,7 +8,7 @@ LOG = logging.getLogger(__name__)
 class Rule(object):
     on_change = []
     on_time = ''
-    signals = []
+    on_signal = []
     context = None
 
     def add_delayed(self, seconds, fn):

@@ -45,7 +45,7 @@ class Rule(object):
     @asyncio.coroutine
     def try_process_signal(self, topic, val):
         try:
-            if asyncio.iscoroutinefunction(self.process):
+            if asyncio.iscoroutinefunction(self.process_signal):
                 yield from self.process_signal(topic, val)
             else:
                 self.process_signal(topic, val)

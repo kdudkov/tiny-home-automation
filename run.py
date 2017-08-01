@@ -36,6 +36,7 @@ DUMP_FILE = os.path.join(BASE_PATH, 'mahno.dump')
 
 class Main(object):
     running = True
+    coroutines = []
 
     def __init__(self):
         signal.signal(signal.SIGUSR1, self.debug)

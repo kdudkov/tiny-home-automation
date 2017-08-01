@@ -44,6 +44,7 @@ class MqttActor(AbstractActor):
     @asyncio.coroutine
     def loop(self):
         self.connected = False
+
         while self.running:
             if not self.connected:
                 self.connected = yield from self.connect()
@@ -59,9 +60,11 @@ class MqttActor(AbstractActor):
             except Exception as e:
                 LOG.error('%s' % e)
                 self.connected = False
+
             if not self.connected:
                 yield from self.disconnect()
                 yield from asyncio.sleep(1)
+
         yield from self.disconnect()
 
     @asyncio.coroutine
@@ -118,15 +121,24 @@ class MqttActor(AbstractActor):
         return cmd.startswith('mqtt:')
 
     @asyncio.coroutine
+    def wait_connected(self):
+        while not self.connected:
+            yield from asyncio.sleep(1)
+
+            if not self.running:
+                break
+
+        return self.running
+
+    @asyncio.coroutine
     def periodical_sender(self):
+        if not self.config['mqtt'].get('out_topic'):
+            LOG.warning('no out topic configured')
+            return
+
         while self.running:
             for item in self.context.items:
-                while not self.connected:
-                    yield from asyncio.sleep(1)
-                    if not self.running:
-                        break
-
-                if not self.running:
+                if not (yield from self.wait_connected()):
                     break
 
                 t = self.send_time.get(item.name, 0)
@@ -134,27 +146,34 @@ class MqttActor(AbstractActor):
                     yield from asyncio.sleep(0.1)
                     continue
 
-                self.send_time[item.name] = time.time()
-                topic = self.config['mqtt'].get('out_topic')
-                if topic:
-                    try:
-                        val = str(item.value).encode('UTF-8') if item.value is not None else bytes()
-                        yield from self.mqtt_client.publish(topic.format(item.name), val, 1)
-                    except:
-                        LOG.exception('send out error')
+                yield from self.send_out(item, False)
+
                 yield from asyncio.sleep(0.1)
 
     @asyncio.coroutine
     def send_out(self, item, changed):
+        topic = self.config['mqtt'].get('out_topic')
+        if not topic:
+            return
+
         t = self.send_time.get(item.name, 0)
         if time.time() - t < self.config['mqtt'].get('min_send_time', 30) and not changed:
             return
+
         self.send_time[item.name] = time.time()
-        topic = self.config['mqtt'].get('out_topic')
-        if topic:
-            yield from self.mqtt_client.publish(topic.format(item.name), str(item.value).encode('UTF-8'),
-                                                1 if changed else 0)
+        try:
+            val = str(item.value).encode('UTF-8') if item.value is not None else bytes()
+
+            if not (yield from self.wait_connected()):
+                return
+
+            yield from self.mqtt_client.publish(topic.format(item.name), val, 1 if changed else 0)
+        except:
+            LOG.exception('send out error')
 
     @asyncio.coroutine
     def command(self, cmd, arg):
+        if not (yield from self.wait_connected()):
+            return
+
         yield from self.mqtt_client.publish(cmd[5:], arg.encode('UTF-8'), 0)

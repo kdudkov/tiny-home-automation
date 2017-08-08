@@ -131,6 +131,22 @@ class KodiActor(AbstractActor):
                 LOG.exception('loop')
             if res:
                 self.context.set_item_value(self.get_name('state'), res['state'])
+                name = ''
+
+                item = res.get('item', {})
+
+                if item.get('type') == 'movie':
+                    name = item.get('label')
+
+                if item.get('type') == 'episode':
+                    name = '{} {}.{} {}'.format(
+                        item.get('showtitle'),
+                        item.get('season'),
+                        item.get('episode'),
+                        item.get('title'))
+
+                self.context.set_item_value(self.get_name('item'), name)
+
             yield from asyncio.sleep(5)
 
     def is_my_command(self, cmd, arg):

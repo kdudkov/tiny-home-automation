@@ -30,12 +30,12 @@ class Rule(object):
         self.context.item_command(name, cmd)
 
     @asyncio.coroutine
-    def try_process(self, name, old_val, val):
+    def try_process(self, name, val, old_val=None, age=None):
         try:
             if asyncio.iscoroutinefunction(self.process):
-                yield from self.process(name, old_val, val)
+                yield from self.process(name, val, old_val, age)
             else:
-                self.process(name, old_val, val)
+                self.process(name, val, old_val, age)
         except:
             LOG.exception('error in rule %s', self.__class__.__name__)
 
@@ -49,7 +49,7 @@ class Rule(object):
         except:
             LOG.exception('error in rule %s', self.__class__.__name__)
 
-    def process(self, name, old_val, val):
+    def process(self, name, val, old_val, age):
         pass
 
     def process_signal(self, topic, val):

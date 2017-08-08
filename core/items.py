@@ -41,16 +41,14 @@ class Items(object):
 
     def set_item_value(self, name, value):
         """
-        Return pair od old_val, new_val if value was changed, else None
+        Return true if item changed
         """
 
         item = self.get_item(name)
         if not item:
             raise Exception('not found item %s' % name)
-        old_val = item.value
-        if item.set_value(value):
-            new_val = item.value
-            return old_val, new_val
+
+        return item.set_value(value)
 
     def as_list(self, tag=None):
         if tag:

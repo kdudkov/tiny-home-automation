@@ -2,7 +2,6 @@ import asyncio
 import collections
 import functools
 import logging
-import time
 
 from rules.abstract import Rule
 from .items import Items
@@ -62,16 +61,19 @@ class Context(object):
         return item.value if item is not None else None
 
     def set_item_value(self, name, value, force=False):
-        t = self.items.set_item_value(name, value)
         item = self.items.get_item(name)
-        self.run_cb(CB_ONCHECK, item, t is not None)
+        if not item:
+            raise Exception('not found item %s' % name)
 
-        if t:
-            oldv, newv = t
-            self.run_cb(CB_ONCHANGE, name, oldv, newv, time.time())
-        elif force:
-            oldv, newv = value, value
-            self.run_cb(CB_ONCHANGE, name, oldv, newv, time.time())
+        old_value = item.value
+        age = item.age
+
+        changed = self.items.set_item_value(name, value)
+
+        self.run_cb(CB_ONCHECK, item, changed)
+
+        if changed or force:
+            self.run_cb(CB_ONCHANGE, name, value, old_value, age)
 
     def add_delayed(self, seconds, fn):
         if self.loop:

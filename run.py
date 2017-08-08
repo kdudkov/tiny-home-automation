@@ -170,18 +170,18 @@ class Main(object):
                     try:
                         if rule.on_time and cron.check_cron_values(rule.on_time, dt):
                             LOG.info('running rule %s on cron %s', rule.__class__.__name__, rule.on_time)
-                            asyncio.async(rule.try_process(cron.name, None, dt), loop=self.loop)
+                            asyncio.async(rule.try_process(cron.name, dt), loop=self.loop)
                     except:
                         LOG.exception('cron worker')
 
             yield from asyncio.sleep(30)
 
     @asyncio.coroutine
-    def on_item_change(self, name, old_val, val, time):
+    def on_item_change(self, name, val, old_val, age):
         for rule in self.context.rules:
             if name in rule.on_change:
                 LOG.info('running rule %s on %s change', rule.__class__.__name__, name)
-                asyncio.async(rule.try_process(name, old_val, val), loop=self.loop)
+                asyncio.async(rule.try_process(name, val, old_val, age), loop=self.loop)
 
     @asyncio.coroutine
     def commands_processor(self):

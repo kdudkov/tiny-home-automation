@@ -11,7 +11,7 @@ class NightModeRule(abstract.Rule):
     on_change = ['light_room']
 
     @asyncio.coroutine
-    def process(self, name, old_val, val):
+    def process(self, name, val, old_val, age):
         if val == OFF and self.time_between('22:00', '3:00'):
             self.post_update('home_mode', 'night')
 
@@ -23,7 +23,7 @@ class BtnRule(abstract.Rule):
     on_change = ['light_room_btn']
 
     @asyncio.coroutine
-    def process(self, name, old_val, val):
+    def process(self, name, val, old_val, age):
         v = self.get_val_or_none('light_room')
         self.item_command('light_room', ON if v == OFF else OFF)
 
@@ -32,7 +32,7 @@ class NightCorridorRule(abstract.Rule):
     on_change = ['light_corridor']
 
     @asyncio.coroutine
-    def process(self, name, old_val, val):
+    def process(self, name, val, old_val, age):
         if val == OFF and self.time_between('22:00', '4:00'):
             self.item_command('light_corridor_night', ON)
 
@@ -46,7 +46,7 @@ class NightMode(abstract.Rule):
     on_change = ['home_mode']
 
     @asyncio.coroutine
-    def process(self, name, old_val, val):
+    def process(self, name, val, old_val, age):
         if val == 'night':
             self.item_command('light_room', OFF)
             self.item_command('light_corridor', OFF)

@@ -22,7 +22,7 @@ class AbstractThermostat(abstract.Rule):
         self.last_switch = 0
 
     @asyncio.coroutine
-    def process(self, name, old_val, val):
+    def process(self, name, val, old_val, age):
         if self.get_val_or_none(self.switch_item) != ON:
             return
 

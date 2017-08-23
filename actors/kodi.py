@@ -86,12 +86,12 @@ class Kodi(object):
     def play_random(self, name, max_season=3):
         stat = yield from self.get_status()
         if stat['state'] == 'OFF':
-            LOG.warn('%s is off', self.addr)
+            LOG.warning('%s is off', self.addr)
             return
 
         ser = yield from self.get_serial(name)
         if not ser:
-            LOG.warn('%s is not found', name)
+            LOG.warning('%s is not found', name)
             return
         sid = ser['tvshowid']
 

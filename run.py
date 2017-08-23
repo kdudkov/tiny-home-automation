@@ -232,7 +232,9 @@ if __name__ == '__main__':
     parser.add_argument('--debug', dest='debug', action='store_true')
     args = parser.parse_args()
 
-    log_format = '%(asctime)-15s %(levelname)-8s %(name)-8s %(message)s'
+    log_format = '%(asctime)-15s %(levelname)-8s %(module)-8s %(message)s'
+    log_format_rules = '%(asctime)-15s %(levelname)-8s %(module)-8s %(funcName)-10s %(message)s'
+
     if args.debug:
         logging.basicConfig(level='INFO')
     else:
@@ -260,7 +262,7 @@ if __name__ == '__main__':
                                                        maxBytes=2 * 1024 * 1024,
                                                        backupCount=2)
         handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter(log_format))
+        handler.setFormatter(logging.Formatter(log_format_rules))
         logging.getLogger('rules').addHandler(handler)
 
         logger.setLevel(logging.INFO)

@@ -1,12 +1,12 @@
 def time_minutes(t):
     if t is None:
-        return '0 м'
+        return '0м'
     res = ''
     n = t
     h = int(n / 3600)
     if h:
-        res = '%d ч' % h
+        res = '%dч' % h
     n %= 3600
     m = int(n / 60)
-    res += '%d м' % m
+    res += ' %dм' % m
     return res.strip()

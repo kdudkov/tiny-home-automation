@@ -57,9 +57,12 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
                     $scope.tags = t;
                     $scope.tags.sort();
                     $scope.error_text = '';
+
                     if (! ws)
                         $timeout(get_data, reload_time);
-                    $scope.set_tag($scope.tags[0]);
+
+                    if ($scope.current_tag == null)
+                        $scope.set_tag($scope.tags[0]);
                     }
                 )
                 .error(function () {
@@ -143,6 +146,7 @@ app.controller('MainCtrl', function ($log, $scope, $http, $timeout) {
     $scope.set_tag = function (tag) {
         $log.info("set tag " + tag);
         $scope.current_tag = tag;
+        get_data();
         if (ws)
             socket.send(tag);
     };

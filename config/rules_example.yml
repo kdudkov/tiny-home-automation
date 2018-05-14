@@ -1,0 +1,17 @@
+---
+- name: 'morning'
+  trigger:
+    time: '0 8 * * *'
+    items:
+    - item_id: daytime
+      to: 'day'
+  action:
+    - service: log
+      data:
+        message: 'good morning!'
+    - condition: state
+      item_id: home_mode
+      state: 'night'
+    - service: set_state
+      item_id: home_mode
+      value: 'day'

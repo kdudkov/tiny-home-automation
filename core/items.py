@@ -8,7 +8,7 @@ from operator import attrgetter
 
 from core import functions
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 THRESHOLD = 48 * 60 * 60
 
@@ -25,7 +25,6 @@ class Items(object):
             yield s
 
     def add_item(self, s):
-        assert isinstance(s, Item), "invalid item class"
         assert not self.get_item(s.name), "already have this item"
         self._items.append(s)
 
@@ -45,6 +44,7 @@ class Items(object):
         """
 
         item = self.get_item(name)
+
         if not item:
             raise Exception('not found item %s' % name)
 
@@ -156,6 +156,7 @@ class Item(object):
     def set_value(self, value):
         val = self.convert_value(value)
         self.checked = time.time()
+
         if val is not None and self._value != val:
             LOG.info('%s changed from %s to %s', self.name, self._value, val)
             self._value = val

@@ -3,13 +3,13 @@ import collections
 import functools
 import logging
 
-from rules.abstract import Rule
 from .items import Items
+from .rules import Rule
 
 CB_ONCHANGE = 'onchange'
 CB_ONCHECK = 'oncheck'
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 
 class Context(object):
@@ -62,8 +62,10 @@ class Context(object):
 
     def set_item_value(self, name, value, force=False):
         item = self.items.get_item(name)
+
         if not item:
-            raise Exception('not found item %s' % name)
+            LOG.error('not found item %s' % name)
+            return False
 
         old_value = item.value
         age = item.age
@@ -73,7 +75,7 @@ class Context(object):
         self.run_cb(CB_ONCHECK, item, changed)
 
         if changed or force:
-            self.run_cb(CB_ONCHANGE, name, value, old_value, age)
+            self.run_cb(CB_ONCHANGE, name, item.value, old_value, age)
 
     def add_delayed(self, seconds, fn):
         if self.loop:

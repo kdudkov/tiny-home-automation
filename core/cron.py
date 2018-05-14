@@ -3,24 +3,24 @@ from datetime import datetime
 name = '*cron*'
 
 
-def check_cron_values(val, dt):
-    a = []
+def check_cron_values(val, dt, last):
     if isinstance(val, (tuple, list)):
         for v in val:
             if check_cron_value(v, dt):
-                return True
-        return False
+                return v
+        return None
 
     if isinstance(val, str):
-        return check_cron_value(a, dt)
+        return val if check_cron_value(val, dt) else None
 
 
 def check_cron_value(val, dt):
-    a = []
     if isinstance(val, (dict, list)):
         a = list(val)
-    if isinstance(val, str):
+    elif isinstance(val, str):
         a = val.split()
+    else:
+        raise Exception('invalid cron type: {}'.format(val))
 
     if isinstance(dt, (int, float)):
         dt = datetime.fromtimestamp(dt)

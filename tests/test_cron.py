@@ -27,5 +27,5 @@ def test_check_cron_value():
     assert cron.check_cron_value('*/3 * * * *', dt) is False
     assert cron.check_cron_value('*/8 * * * *', dt) is False
 
-    assert cron.check_cron_values(('20 15 * * 1-5', '0 10 * * 6,7'), dt)
-    assert cron.check_cron_values(('20 0 * * 1-5', '20 15 * * 6,7'), dt) is False
+    assert cron.check_cron_values(('20 15 * * 1-5', '0 10 * * 6,7'), dt, 0) == '20 15 * * 1-5'
+    assert cron.check_cron_values(('20 0 * * 1-5', '20 15 * * 6,7'), dt, 0) is None

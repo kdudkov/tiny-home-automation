@@ -7,7 +7,7 @@ import aiohttp
 
 from . import AbstractActor
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 
 class Kankun(object):
@@ -24,9 +24,9 @@ class Kankun(object):
         p = {}
         if params:
             p.update(params)
-        with aiohttp.Timeout(self.timeout):
-            with aiohttp.Timeout(self.timeout):
-                resp = yield from self.session.get('http://%s/cgi-bin/json.cgi' % self.addr, params=p)
+
+        resp = yield from self.session.get('http://%s/cgi-bin/json.cgi' % self.addr, params=p, timeout=self.timeout)
+
         if resp.status != 200:
             raise Exception('http %s' % resp.status)
         try:

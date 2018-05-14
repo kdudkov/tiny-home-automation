@@ -6,7 +6,7 @@ from astral import Location
 
 from actors import AbstractActor
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 radians = lambda x: x * math.pi / 180
 deg = lambda x: x * 180 / math.pi

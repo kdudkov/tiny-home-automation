@@ -4,14 +4,11 @@
 import argparse
 import asyncio
 import functools
-import inspect
-import json
 import logging.handlers
 import os
 import pickle
 import signal
 import sys
-import time
 import traceback
 
 import yaml
@@ -22,13 +19,13 @@ from actors.kodi import KodiActor
 from actors.modbus import ModbusActor
 from actors.mqtt import MqttActor
 from core import Context
-from core import cron
 from core import http_server
 from core.context import CB_ONCHECK, CB_ONCHANGE
 from core.items import read_item
-from rules.abstract import Rule
+from core.rules import Rule
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
+RULES_LOG = logging.getLogger('mahno.__rules')
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 DUMP_FILE = os.path.join(BASE_PATH, 'mahno.dump')
@@ -37,6 +34,7 @@ DUMP_FILE = os.path.join(BASE_PATH, 'mahno.dump')
 class Main(object):
     running = True
     coroutines = []
+    actors = {}
 
     def __init__(self):
         signal.signal(signal.SIGUSR1, self.debug)
@@ -49,8 +47,7 @@ class Main(object):
 
         self.load_config()
 
-        self.load_rules()
-
+    def init_actors(self):
         mqtt_act = MqttActor()
         self.actors = {'mqtt': mqtt_act, 'astro': AstroActor()}
 
@@ -72,7 +69,7 @@ class Main(object):
                 self.actors['kankun' + k] = KankunActor(k, v)
 
         for actor in self.actors.values():
-            actor.init(self.config, self.context)
+            self.do(actor.init, self.config, self.context)
 
         try:
             self.load_dump(DUMP_FILE)
@@ -118,31 +115,21 @@ class Main(object):
 
     def load_config(self):
         if os.path.isfile(os.path.join(BASE_PATH, 'config', 'config.yml')):
-            self.config = yaml.load(open(os.path.join(BASE_PATH, 'config', 'config.yml'), 'r'))
+            self.config = yaml.load(open(os.path.join(BASE_PATH, 'config', 'config.yml'), 'r', encoding='UTF-8'))
         for s in os.listdir(os.path.join(BASE_PATH, 'config')):
-            if s.startswith('items') and s.endswith('.yml'):
+            if s.startswith('items_') and s.endswith('.yml'):
                 try:
                     self.load_items_file(os.path.join(BASE_PATH, 'config', s))
                 except:
-                    LOG.exception('yml load')
-
-    def load_rules(self):
-        for fn in os.listdir('rules'):
-            if fn.startswith('.') or fn.startswith('_') or not fn.endswith('.py'):
-                continue
-            mod = __import__('rules.' + fn[:-3])
-            submod = getattr(mod, fn[:-3])
-            for name1 in dir(submod):
-                classes = Rule.__subclasses__()
-                classes.append(Rule)
-                if inspect.isclass(getattr(submod, name1)):
-                    r = getattr(submod, name1)
-                    if issubclass(r, tuple(classes)) and r != Rule and 'Abstract' not in name1:
-                        LOG.info('loading rule %s.%s', fn[:-3], name1)
-                        self.context.add_rule(r())
+                    LOG.exception('yml items load')
+            elif s.startswith('rules_') and s.endswith('.yml'):
+                try:
+                    self.load_rules_file(os.path.join(BASE_PATH, 'config', s))
+                except:
+                    LOG.exception('yml rules load')
 
     def load_items_file(self, fname):
-        conf = yaml.load(open(fname, 'r'))
+        conf = yaml.load(open(fname, 'r', encoding='UTF-8'))
 
         n = 0
         for item in conf:
@@ -152,36 +139,41 @@ class Main(object):
                 n += 1
         LOG.info('load %s items from config %s', n, fname)
 
+    def load_rules_file(self, fname):
+        LOG.info('load rules from file %s', fname)
+        conf = yaml.load(open(fname, 'r', encoding='UTF-8'))
+
+        n = 0
+        for r in conf:
+            rule = Rule(r)
+
+            self.context.add_rule(rule)
+            n += 1
+        LOG.info('load %s rules from file %s', n, fname)
+
     @asyncio.coroutine
     def cron_checker(self):
-        minute = 0
-
         while self.running:
-            new_m = int(time.time() / 60)
+            for rule in self.context.rules:
+                try:
+                    v = rule.check_time()
+                    if v is not None:
+                        RULES_LOG.info('running rule %s on %s', rule.name, v)
+                        self.do(rule.process_cron, v)
+                except:
+                    RULES_LOG.exception('cron worker on rule %s', rule.name)
 
-            if minute != new_m:
-                LOG.debug('check cron')
-                minute = new_m
-                dump = self.context.items.as_list()
-                json.dump(dump, open('items.json', 'w'), indent=4)
-                dt = time.time()
-
-                for rule in self.context.rules:
-                    try:
-                        if rule.on_time and cron.check_cron_values(rule.on_time, dt):
-                            LOG.info('running rule %s on cron %s', rule.__class__.__name__, rule.on_time)
-                            asyncio.async(rule.try_process(cron.name, dt), loop=self.loop)
-                    except:
-                        LOG.exception('cron worker')
-
-            yield from asyncio.sleep(30)
+            yield from asyncio.sleep(0.5)
 
     @asyncio.coroutine
     def on_item_change(self, name, val, old_val, age):
         for rule in self.context.rules:
-            if name in rule.on_change:
-                LOG.info('running rule %s on %s change', rule.__class__.__name__, name)
-                asyncio.async(rule.try_process(name, val, old_val, age), loop=self.loop)
+            if rule.check_item_change(name, val, old_val, age):
+                RULES_LOG.info('running rule %s on %s change', rule.name, name)
+                try:
+                    self.do(rule.process_item_change, name, val, old_val, age)
+                except:
+                    RULES_LOG.exception('item change on rule %s', rule.name)
 
     @asyncio.coroutine
     def commands_processor(self):
@@ -204,6 +196,7 @@ class Main(object):
         self.loop = asyncio.get_event_loop()
         self.context.loop = self.loop
         self.coroutines = []
+        self.init_actors()
 
         for s in [self.cron_checker(), self.commands_processor()]:
             self.coroutines.append(asyncio.async(s, loop=self.loop))
@@ -232,40 +225,40 @@ if __name__ == '__main__':
     parser.add_argument('--debug', dest='debug', action='store_true')
     args = parser.parse_args()
 
-    log_format = '%(asctime)-15s %(levelname)-8s %(module)-8s %(message)s'
-    log_format_rules = '%(asctime)-15s %(levelname)-8s %(module)-8s %(funcName)-10s %(message)s'
+    log_format = '%(asctime)-15s %(levelname)s %(module)s %(funcName)s %(message)s'
+    log_format_rules = '%(asctime)-15s %(levelname)s %(message)s'
 
+    lvl = logging.INFO
     if args.debug:
-        logging.basicConfig(level='INFO')
-    else:
-        logger = logging.getLogger()
-        handler = logging.handlers.RotatingFileHandler(filename=os.path.join(BASE_PATH, 'mahno.log'),
-                                                       maxBytes=2 * 1024 * 1024,
-                                                       backupCount=2)
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter(log_format))
-        logger.addHandler(handler)
+        lvl = logging.DEBUG
 
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter(log_format))
-        logger.addHandler(handler)
+    main_file_handler = logging.handlers.RotatingFileHandler(filename=os.path.join(BASE_PATH, 'mahno.log'),
+                                                             maxBytes=2 * 1024 * 1024,
+                                                             backupCount=2)
+    main_file_handler.setFormatter(logging.Formatter(log_format))
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter(log_format))
 
-        handler = logging.handlers.RotatingFileHandler(filename=os.path.join(BASE_PATH, 'events.log'),
-                                                       maxBytes=2 * 1024 * 1024,
-                                                       backupCount=2)
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter(log_format))
-        logging.getLogger('core.items').addHandler(handler)
+    logger = logging.getLogger()
+    logger.setLevel(logging.ERROR)
+    logger.addHandler(main_file_handler)
+    logger.addHandler(console_handler)
 
-        handler = logging.handlers.RotatingFileHandler(filename=os.path.join(BASE_PATH, 'rules.log'),
-                                                       maxBytes=2 * 1024 * 1024,
-                                                       backupCount=2)
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter(log_format_rules))
-        logging.getLogger('rules').addHandler(handler)
+    logger = logging.getLogger('mahno').setLevel(lvl)
+    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 
-        logger.setLevel(logging.INFO)
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
+    # events
+    handler = logging.handlers.RotatingFileHandler(filename=os.path.join(BASE_PATH, 'events.log'),
+                                                   maxBytes=2 * 1024 * 1024,
+                                                   backupCount=2)
+    handler.setFormatter(logging.Formatter(log_format))
+    logging.getLogger('mahno.core.items').addHandler(handler)
+
+    # rules
+    handler = logging.handlers.RotatingFileHandler(filename=os.path.join(BASE_PATH, 'rules.log'),
+                                                   maxBytes=2 * 1024 * 1024,
+                                                   backupCount=2)
+    handler.setFormatter(logging.Formatter(log_format_rules))
+    RULES_LOG.addHandler(handler)
 
     Main().run()

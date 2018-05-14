@@ -16,21 +16,27 @@ class Kodi(object):
     timeout = 3
     user = 'kodi'
     passwd = 'kodi'
+    session = None
 
     def __init__(self, addr, loop):
         self.addr = addr
         self.loop = loop
 
+    @asyncio.coroutine
+    def init(self):
         self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth(self.user, self.passwd),
                                              loop=self.loop)
 
     @asyncio.coroutine
     def req(self, fn, params=None):
         req = {'jsonrpc': '2.0', 'id': 1, 'method': fn}
+
         if params:
             req['params'] = params
-        with aiohttp.Timeout(self.timeout):
-            resp = yield from self.session.get('http://%s/jsonrpc' % self.addr, params={'request': json.dumps(req)})
+
+        resp = yield from self.session.get(
+            'http://%s/jsonrpc' % self.addr, params={'request': json.dumps(req)}, timeout=self.timeout)
+
         if resp.status != 200:
             raise Exception('http %s' % resp.status)
         try:
@@ -114,10 +120,12 @@ class KodiActor(AbstractActor):
         self.addr = addr
         self.kodi = None
 
+    @asyncio.coroutine
     def init(self, config, context):
         self.config = config
         self.context = context
         self.kodi = Kodi(self.addr, self.context.loop)
+        yield from self.kodi.init()
 
     @asyncio.coroutine
     def loop(self):

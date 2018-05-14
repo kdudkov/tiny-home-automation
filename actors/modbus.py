@@ -6,7 +6,7 @@ import logging
 
 from actors import AbstractActor
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 
 def hex_data(data):

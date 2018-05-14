@@ -6,7 +6,7 @@ import os
 from aiohttp import web
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 
 class WebSocket(web.View):
@@ -50,20 +50,20 @@ class Server(web.Application):
         self.router.add_route('GET', '/', self.index)
         self.router.add_route('GET', '/2', self.index2)
         self.router.add_route('GET', '/items/', self.get_items)
-        self.router.add_route('GET', '/items/{tag}', self.get_items)
-        self.router.add_route('GET', '/item/{name}', self.get_item)
-        self.router.add_route('GET', '/item/{name}/', self.get_item)
-        self.router.add_route('PUT', '/item/{name}', self.put_item)
-        self.router.add_route('PUT', '/item/{name}/', self.put_item)
-        self.router.add_route('POST', '/item/{name}', self.post_item)
-        self.router.add_route('POST', '/item/{name}/', self.post_item)
+        self.router.add_route('GET', '/items/{name}', self.get_item)
+        self.router.add_route('GET', '/items/{name}/', self.get_item)
+        self.router.add_route('PUT', '/items/{name}', self.put_item)
+        self.router.add_route('PUT', '/items/{name}/', self.put_item)
+        self.router.add_route('POST', '/items/{name}', self.post_item)
+        self.router.add_route('POST', '/items/{name}/', self.post_item)
+        self.router.add_route('GET', '/rules/', self.get_rules)
 
     def get_app(self, config, loop):
         LOG.info('server on port %s', config['server']['port'])
-        return loop.create_server(self.make_handler(), host='0.0.0.0', port=config['server']['port'])
+        return loop.create_server(self.make_handler(loop=loop), host='0.0.0.0', port=config['server']['port'])
 
     def json_resp(self, s):
-        headers = {'content-type': 'application/json'}
+        headers = {'Content-Type': 'application/json'}
         return web.Response(body=json.dumps(s).encode('UTF-8'), headers=headers)
 
     def resp_404(self, s):
@@ -111,6 +111,14 @@ class Server(web.Application):
         return self.json_resp(item.to_dict())
 
     @asyncio.coroutine
+    def get_rules(self, request):
+        res = []
+        for r in self.context.rules:
+            res.append(r.to_dict())
+
+        return self.json_resp(res)
+
+    @asyncio.coroutine
     def on_check(self, item, changed):
         s = json.dumps(item.to_dict())
         for ws in self['websockets'].values():
@@ -122,7 +130,7 @@ class Server(web.Application):
 
 
 def get_app(context, config, loop):
-    s = Server()
+    s = Server(loop=loop)
     s.context = context
     s.init()
     context.add_cb('oncheck', s.on_check)

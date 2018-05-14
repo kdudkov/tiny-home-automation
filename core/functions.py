@@ -1,3 +1,6 @@
+# coding: UTF-8
+
+
 def time_minutes(t):
     if t is None:
         return '0м'

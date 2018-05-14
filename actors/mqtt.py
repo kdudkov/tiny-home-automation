@@ -6,7 +6,7 @@ import hbmqtt.client
 
 from . import AbstractActor
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('mahno.' + __name__)
 
 
 def match_topic(mask, topic):
@@ -22,10 +22,13 @@ def match_topic(mask, topic):
     for m, t in zip(mask_parts, topic_parts):
         if m == '+':
             continue
+
         if m == '#':
             return True
+
         if t != m:
             return False
+
     return True
 
 
@@ -38,7 +41,6 @@ class MqttActor(AbstractActor):
     def init(self, config, context):
         self.config = config
         self.context = context
-
         self.mqtt_client = hbmqtt.client.MQTTClient(config={'auto_reconnect': False})
 
     @asyncio.coroutine
@@ -100,6 +102,7 @@ class MqttActor(AbstractActor):
         # common topic for item commands
         if topic.startswith(self.config['mqtt'].get('in_topic')):
             cmd = topic.split('/')[-1]
+
             if value:
                 LOG.info('got command %s %s', cmd, value)
                 self.context.item_command(cmd, value)
@@ -112,11 +115,21 @@ class MqttActor(AbstractActor):
 
         # signals
         for rule in self.context.rules:
-            for mask in rule.on_signal:
-                if match_topic(mask, topic):
+            if 'mqtt' not in rule.trigger:
+                continue
+
+            m = rule.trigger['mqtt']
+
+            if isinstance(m, (list, tuple)):
+                for mask in m:
+                    if match_topic(mask, topic):
+                        LOG.info('running rule %s on signal %s, val %s', rule.__class__.__name__, topic, value)
+                        asyncio.async(rule.process_signal(topic, value), loop=self.context.loop)
+                        break
+            else:
+                if match_topic(m, topic):
                     LOG.info('running rule %s on signal %s, val %s', rule.__class__.__name__, topic, value)
-                    asyncio.async(rule.try_process_signal(topic, value), loop=self.context.loop)
-                    break
+                    asyncio.async(rule.process_signal(topic, value), loop=self.context.loop)
 
     def is_my_command(self, cmd, arg):
         return cmd.startswith('mqtt:')
@@ -143,6 +156,7 @@ class MqttActor(AbstractActor):
                     break
 
                 t = self.send_time.get(item.name, 0)
+
                 if time.time() - t <= self.config['mqtt'].get('send_time', 30):
                     yield from asyncio.sleep(0.1)
                     continue
@@ -154,27 +168,33 @@ class MqttActor(AbstractActor):
     @asyncio.coroutine
     def send_out(self, item, changed):
         topic = self.config['mqtt'].get('out_topic')
+
         if not topic:
             return
 
         t = self.send_time.get(item.name, 0)
+
         if time.time() - t < self.config['mqtt'].get('min_send_time', 30) and not changed:
             return
 
         self.send_time[item.name] = time.time()
+
         try:
             val = str(item.value).encode('UTF-8') if item.value is not None else bytes()
 
             if not (yield from self.wait_connected()):
                 return
 
-            yield from self.mqtt_client.publish(topic.format(item.name), val, 1 if changed else 0)
+            yield from self.mqtt_client.publish(topic.format(item.name), val, 0)
+
+            if changed:
+                yield from self.mqtt_client.publish(topic.format(item.name), val, 1)
         except:
-            LOG.exception('send out error')
+            LOG.exception('send out error: %s:%s', item.name, item.value)
 
     @asyncio.coroutine
     def command(self, cmd, arg):
         if not (yield from self.wait_connected()):
             return
 
-        yield from self.mqtt_client.publish(cmd[5:], arg.encode('UTF-8'), 0)
+        yield from self.mqtt_client.publish(cmd[5:], str(arg).encode('UTF-8'), 0)

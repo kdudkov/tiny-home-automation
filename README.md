@@ -11,7 +11,7 @@ Works fine on Raspberry Pi. Works with sensors and actors via:
 
 Now uses yml-based rules.
 
-Example of rule turning on backlight (sonoff s20 module) on pir sensor is active on esp8266 and turning it off 10 seconds
+Example of rule turning on backlight (sonoff s20 module) on pir sensor is active on esp8266 and turning it off 30 seconds
 after pir is inactive, doing this night-time only and if main light is off:
 
 ```yml

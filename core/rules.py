@@ -142,6 +142,7 @@ class Rule(object):
         if not self.check_conditions():
             return
 
+        LOG.info('running rule %s on %s', self.name, d['triggered'])
         start = time.time()
         self.busy = True
         try:
@@ -168,7 +169,7 @@ class Rule(object):
     @asyncio.coroutine
     def do_service(self, act, context):
         s_name = act['service']
-        if s_name == 'set_item':
+        if s_name == 'set_state':
             name = act['item_id']
             value = self.get_value(act, context)
             self.context.set_item_value(name, value)

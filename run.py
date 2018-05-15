@@ -158,7 +158,6 @@ class Main(object):
                 try:
                     v = rule.check_time()
                     if v is not None:
-                        RULES_LOG.info('running rule %s on %s', rule.name, v)
                         self.do(rule.process_cron, v)
                 except:
                     RULES_LOG.exception('cron worker on rule %s', rule.name)
@@ -169,7 +168,6 @@ class Main(object):
     def on_item_change(self, name, val, old_val, age):
         for rule in self.context.rules:
             if rule.check_item_change(name, val, old_val, age):
-                RULES_LOG.info('running rule %s on %s change', rule.name, name)
                 try:
                     self.do(rule.process_item_change, name, val, old_val, age)
                 except:

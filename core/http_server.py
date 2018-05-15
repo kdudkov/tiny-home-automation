@@ -49,13 +49,17 @@ class Server(web.Application):
         self.router.add_route('GET', '/ws', WebSocket, name='chat')
         self.router.add_route('GET', '/', self.index)
         self.router.add_route('GET', '/2', self.index2)
+        self.router.add_route('GET', '/items', self.get_items)
         self.router.add_route('GET', '/items/', self.get_items)
         self.router.add_route('GET', '/items/{name}', self.get_item)
         self.router.add_route('GET', '/items/{name}/', self.get_item)
+        self.router.add_route('GET', '/items/{name}/value', self.get_item_value)
+        self.router.add_route('GET', '/items/{name}/value/', self.get_item_value)
         self.router.add_route('PUT', '/items/{name}', self.put_item)
         self.router.add_route('PUT', '/items/{name}/', self.put_item)
         self.router.add_route('POST', '/items/{name}', self.post_item)
         self.router.add_route('POST', '/items/{name}/', self.post_item)
+        self.router.add_route('GET', '/rules', self.get_rules)
         self.router.add_route('GET', '/rules/', self.get_rules)
 
     def get_app(self, config, loop):
@@ -89,6 +93,14 @@ class Server(web.Application):
         if not item:
             return self.resp_404('item %s not found' % name)
         return self.json_resp(item.to_dict())
+
+    @asyncio.coroutine
+    def get_item_value(self, request):
+        name = request.match_info['name']
+        item = self.context.items.get_item(name)
+        if not item:
+            return self.resp_404('item %s not found' % name)
+        return web.Response(body=str(item.value).encode('UTF-8'))
 
     @asyncio.coroutine
     def put_item(self, request):

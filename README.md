@@ -10,3 +10,48 @@ Works fine on Raspberry Pi. Works with sensors and actors via:
 * HTTP update from any other system
 
 Now uses yml-based rules.
+
+Example of rule turning on backlight (sonoff s20 module) on pir sensor is active on esp8266 and turning it off 10 seconds
+after pir is inactive, doing this night-time only and if main light is off:
+
+```yml
+- name: 'night_light_on'
+  trigger:
+    items:
+    - item_id: room_pir
+      to: 'On'
+  condition:
+    condition_type: and
+    conditions:
+    - condition_type: state
+      item_id: light_room
+      state: 'Off'
+    - condition_type: state
+      item_id: home_mode
+      state: 'night'
+  action:
+  - service: command
+    item_id: s20_2
+    value: 'On'
+
+- name: 'night_light_off'
+  trigger:
+    items:
+    - item_id: room_pir
+      to: 'Off'
+      for:
+        seconds: 30
+  condition:
+    condition_type: and
+    conditions:
+    - condition_type: state
+      item_id: light_room
+      state: 'Off'
+    - condition_type: state
+      item_id: home_mode
+      state: 'night'
+  action:
+  - service: command
+    item_id: s20_2
+    value: 'Off'
+```

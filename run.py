@@ -25,7 +25,7 @@ from core.items import read_item
 from core.rules import Rule
 
 LOG = logging.getLogger('mahno.' + __name__)
-RULES_LOG = logging.getLogger('mahno.__rules')
+RULES_LOG = logging.getLogger('mahno.core.rules')
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 DUMP_FILE = os.path.join(BASE_PATH, 'mahno.dump')

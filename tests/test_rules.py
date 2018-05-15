@@ -132,7 +132,7 @@ def test_condition_numeric():
     c.items.add_item(i)
 
     cond = yaml.load('''
-condition: numeric_state
+condition_type: numeric_state
 item_id: item1
 above: 17
 below: 25
@@ -162,12 +162,12 @@ def test_condition_or():
     c.items.add_item(i)
 
     cond = yaml.load('''
-condition: or
+condition_type: or
 conditions:
-  - condition: numeric_state
+  - condition_type: numeric_state
     item_id: item1
     below: 17
-  - condition: numeric_state
+  - condition_type: numeric_state
     item_id: item1
     above: 25
 ''')

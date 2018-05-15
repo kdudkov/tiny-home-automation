@@ -140,6 +140,7 @@ class Rule(object):
             return
 
         if not self.check_conditions():
+            LOG.debug('rule %s running on %s fail conditions', self.name, d['triggered'])
             return
 
         LOG.info('running rule %s on %s', self.name, d['triggered'])
@@ -211,27 +212,40 @@ class Rule(object):
 
     @staticmethod
     def check_condition(condition, context):
-        if condition['condition'] == 'state':
-            return context.get_item_value(condition['item_id']) == condition['state']
+        if 'condition_type' not in condition:
+            LOG.error('no condition type in condition %s', condition)
+            return False
 
-        if condition['condition'] == 'numeric_state':
+        ct = condition['condition_type']
+
+        if ct == 'state':
+            item = context.items.get_item(condition['item_id'])
+
+            if item is None:
+                LOG.warning('no item %s', condition['item_id'])
+                return False
+
+            return item.value == condition['state']
+
+        elif ct == 'numeric_state':
             return Rule.check_condition_numeric(condition, context)
 
-        if condition['condition'] == 'time':
+        elif ct == 'time':
             return Rule.check_condition_time(condition)
 
-        if condition['condition'] == 'or':
+        elif ct == 'or':
             return any(map(lambda x: Rule.check_condition(x, context), condition['conditions']))
 
-        if condition['condition'] == 'and':
+        elif ct == 'and':
             return all(map(lambda x: Rule.check_condition(x, context), condition['conditions']))
 
-        print(condition['condition'])
-        return True
+        else:
+            LOG.error('invalid condition type \'%s\'', ct)
+        return False
 
     @staticmethod
     def check_condition_numeric(condition, context):
-        assert condition['condition'] == 'numeric_state'
+        assert condition['condition_type'] == 'numeric_state'
 
         val = context.get_item_value(condition['item_id'])
 
@@ -247,7 +261,7 @@ class Rule(object):
                 val = int(val)
 
         for k, v in condition.items():
-            if k in ('item_id', 'condition'):
+            if k in ('item_id', 'condition_type'):
                 continue
 
             if k == 'above':
@@ -265,7 +279,7 @@ class Rule(object):
 
     @staticmethod
     def check_condition_time(condition, t=None):
-        assert condition['condition'] == 'time'
+        assert condition['condition_type'] == 'time'
 
         if t is None:
             t = dt.now()
@@ -273,7 +287,7 @@ class Rule(object):
         m = t.hour * 60 + t.minute
 
         for k, v in condition.items():
-            if k == 'condition':
+            if k == 'condition_type':
                 continue
 
             if k == 'after':

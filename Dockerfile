@@ -4,11 +4,7 @@ EXPOSE 5000
 
 WORKDIR /app
 
-COPY *.py requirements.txt /app/
-COPY actors/ /app/actors/
-COPY core/ /app/core/
-COPY config/ /app/config/
-COPY static/ /app/static/
+ADD files.tar.gz /app/
 
 RUN pip install --no-cache-dir -r requirements.txt
 

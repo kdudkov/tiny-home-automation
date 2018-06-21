@@ -1,7 +1,7 @@
-__pycache__/
-*.py[co]
+__pycache__
 .idea
-env/
+env
+*.py[co]
 *.log
 *.log.*
 *.py~

@@ -170,15 +170,18 @@ class Rule(object):
     @asyncio.coroutine
     def do_service(self, act, context):
         s_name = act['service']
+
         if s_name == 'set_state':
             name = act['item_id']
             value = self.get_value(act, context)
             self.context.set_item_value(name, value)
+
         elif s_name == 'command':
             name = act['item_id']
             value = self.get_value(act, context)
             LOG.info('sending command \'%s\' to %s', value, name)
             self.context.item_command(name, value)
+
         elif s_name == 'log':
             log_service(act.get('data'), context)
 

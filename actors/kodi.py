@@ -49,16 +49,27 @@ class Kodi(object):
             yield from resp.release()
 
     @asyncio.coroutine
-    def get_serial(self, name):
+    def find_serial(self, name):
         res = yield from self.req('VideoLibrary.GetTVShows')
         for r in res.get('tvshows', []):
             if name in r.get('label'):
                 return r
 
     @asyncio.coroutine
-    def get_serial_episodes(self, sid, season):
-        res = yield from self.req('VideoLibrary.GetEpisodes', {'tvshowid': sid, 'season': season})
-        return res.get('episodes', [])
+    def get_serial_episodes(self, sid, season=None):
+        r = {'tvshowid': sid, 'properties': ['showtitle', 'season', 'episode', 'title', 'playcount']}
+        if season:
+            r['season'] = season
+
+        res = yield from self.req('VideoLibrary.GetEpisodes', r)
+        return [x for x in res.get('episodes', [])]
+
+    @asyncio.coroutine
+    def get_episode_details(self, eid):
+        r = {'episodeid': eid}
+
+        res = yield from self.req('VideoLibrary.GetEpisodeDetails', r)
+        return res
 
     @asyncio.coroutine
     def get_status(self):
@@ -95,7 +106,7 @@ class Kodi(object):
             LOG.warning('%s is off', self.addr)
             return
 
-        ser = yield from self.get_serial(name)
+        ser = yield from self.find_serial(name)
         if not ser:
             LOG.warning('%s is not found', name)
             return
@@ -119,6 +130,7 @@ class KodiActor(AbstractActor):
         self.name = name
         self.addr = addr
         self.kodi = None
+        self.loop_time = 3
 
     @asyncio.coroutine
     def init(self, config, context):
@@ -155,7 +167,7 @@ class KodiActor(AbstractActor):
 
                 self.context.set_item_value(self.get_name('item'), name)
 
-            yield from asyncio.sleep(5)
+            yield from asyncio.sleep(self.loop_time)
 
     def is_my_command(self, cmd, arg):
         return cmd.startswith('kodi:%s' % self.name)
@@ -167,3 +179,15 @@ class KodiActor(AbstractActor):
 
     def get_name(self, s):
         return 'kodi_%s_%s' % (self.name, s)
+
+
+if __name__ == '__main__':
+
+    @asyncio.coroutine
+    def st(k):
+        res = k.get_state()
+        print(res)
+
+    loop = asyncio.get_event_loop()
+    k = Kodi('http://192.168.0.230:8080', loop)
+    loop.call_soon(st, k)

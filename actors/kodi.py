@@ -34,6 +34,9 @@ class Kodi(object):
         if params:
             req['params'] = params
 
+        if self.session is None:
+            raise Exception('no session!')
+
         resp = yield from self.session.get(
             'http://%s/jsonrpc' % self.addr, params={'request': json.dumps(req)}, timeout=self.timeout)
 
@@ -42,7 +45,6 @@ class Kodi(object):
         try:
             res = yield from resp.json()
             if 'result' not in res:
-                print(res)
                 raise Exception('error')
             return res['result']
         finally:
@@ -76,20 +78,17 @@ class Kodi(object):
         try:
             res = yield from self.req('Player.GetActivePlayers')
         except Exception as e:
-            print(e)
+            LOG.debug('error: %s', e)
             return {'state': 'OFF'}
+
         if res:
             pid = res[0]['playerid']
             ans = yield from self.req('Player.GetProperties', {'playerid': pid, 'properties': ['speed']})
-            res = {}
-            res['state'] = 'PAUSE' if ans['speed'] == 0 else 'PLAY'
-            ans = yield from self.req('Player.GetItem', {'playerid': pid})
+            res = {'state': 'PAUSE' if ans['speed'] == 0 else 'PLAY'}
+            ans = yield from self.req('Player.GetItem',
+                                      {'playerid': pid,
+                                       'properties': ['showtitle', 'season', 'episode', 'title']})
             res.update(ans)
-            if ans['item']['type'] == 'episode':
-                ans = yield from self.req('VideoLibrary.GetEpisodeDetails', {'episodeid': ans['item']['id'],
-                                                                             'properties': ['showtitle', 'season',
-                                                                                            'episode', 'title']})
-                res['item'].update(ans['episodedetails'])
             return res
         else:
             return {'state': 'STOP'}
@@ -179,15 +178,3 @@ class KodiActor(AbstractActor):
 
     def get_name(self, s):
         return 'kodi_%s_%s' % (self.name, s)
-
-
-if __name__ == '__main__':
-
-    @asyncio.coroutine
-    def st(k):
-        res = k.get_state()
-        print(res)
-
-    loop = asyncio.get_event_loop()
-    k = Kodi('http://192.168.0.230:8080', loop)
-    loop.call_soon(st, k)

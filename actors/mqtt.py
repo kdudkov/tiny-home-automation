@@ -115,7 +115,7 @@ class MqttActor(AbstractActor):
 
         # signals
         for rule in self.context.rules:
-            if 'mqtt' not in rule.trigger:
+            if rule.trigger is None or 'mqtt' not in rule.trigger:
                 continue
 
             m = rule.trigger['mqtt']

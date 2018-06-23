@@ -7,98 +7,33 @@ from datetime import datetime as dt
 from jinja2 import Template
 
 from core.cron import check_cron_values
-from core.items import ON
+from core.items import ON, OFF
 from core.services import log_service
 
 LOG = logging.getLogger('mahno.' + __name__)
 
 
-class Rule(object):
-    def __init__(self, c):
-        self.context = None
-        self.active = False
-        self.last_run = 0
-        self.triggered = ''
-        self.busy = False
-        self.last_time = 0
-        self.data = c
-        self.name = c['name']
-
-        self.trigger = c['trigger']
-
-        self.time_based = False
-        if self.trigger.get('time'):
-            self.time_based = True
-        else:
-            for i in self.trigger.get('items', []):
-                if isinstance(i, dict) and i.get('for') is not None:
-                    self.time_based = True
+class AbstractRule(object):
+    name = 'unnamed'
+    data = None
+    context = None
+    last_run = 0
+    last_time = 0
+    triggered = ''
+    busy = False
+    time_based = False
+    active = False
+    trigger = None
 
     def check_time(self, t=None):
-        """
-        check if rule must be fired
-        """
-        if t is None:
-            t = time.time()
-
-        if not self.time_based:
-            return None
-
-        tr = None
-
-        # check cron
-        if self.trigger.get('time') and t - self.last_run > 60:
-            cron_value = self.trigger['time'].strip()
-
-            v = check_cron_values(cron_value, t, self.last_run)
-            if v is not None:
-                tr = 'cron {}'.format(cron_value)
-
-        # check items
-        for i in self.trigger.get('items', []):
-            if isinstance(i, dict) and i.get('item_id') is not None and i.get('for') is not None:
-                item = self.context.items.get_item(i['item_id'])
-
-                if item is None:
-                    continue
-
-                td = i['for'].get('hours', 0) * 3600 + i['for'].get('minutes', 0) * 60 + i['for'].get('seconds', 0)
-
-                if item.value == i.get('to', ON) and item.age >= td:
-                    tr = 'item {} {} for {} s'.format(item.name, item.value, int(item.age))
-                    break
-
-        if tr is not None and not self.active:
-            self.active = True
-            return tr
-
-        self.active = tr is not None
-        return None
+        pass
 
     def check_item_change(self, name, val, old_val, age):
-        for i in self.trigger.get('items', []):
-            if isinstance(i, str):
-                if i == name:
-                    return True
-
-            if isinstance(i, dict) and i.get('for') is None:
-                if i.get('item_id') != name:
-                    continue
-
-                if i.get('from') is not None and i.get('from') != old_val:
-                    continue
-
-                if i.get('to') is not None and i.get('to') != val:
-                    continue
-
-                return True
-        return False
+        pass
 
     @asyncio.coroutine
     def process_item_change(self, name, val, old_val, age):
         d = dict(
-            rule_name=self.name,
-            items=self.context.items,
             type='item_change',
             name=name,
             value=val,
@@ -110,8 +45,6 @@ class Rule(object):
     @asyncio.coroutine
     def process_signal(self, topic, val):
         d = dict(
-            rule_name=self.name,
-            items=self.context.items,
             type='mqtt',
             name=topic,
             value=val,
@@ -123,8 +56,6 @@ class Rule(object):
     @asyncio.coroutine
     def process_cron(self, v):
         d = dict(
-            rule_name=self.name,
-            items=self.context.items,
             type='cron',
             name=None,
             value=None,
@@ -149,55 +80,12 @@ class Rule(object):
         try:
             self.last_run = time.time()
             self.triggered = d['triggered']
-            yield from self.do_actions(d)
+            yield from self._run(d)
         except:
             LOG.exception('error in rule %s', self.name)
         finally:
             self.last_time = time.time() - start
             self.busy = False
-
-    @asyncio.coroutine
-    def do_actions(self, context):
-        for act in self.data.get('action', []):
-            if 'service' in act:
-                LOG.info('running service %s', act['service'])
-                yield from self.do_service(act, context)
-            elif 'condition' in act:
-                if not self.check_condition(act, self.context):
-                    LOG.info('break on condition %s', act)
-                    break
-
-    @asyncio.coroutine
-    def do_service(self, act, context):
-        s_name = act['service']
-
-        if s_name == 'set_state':
-            name = act['item_id']
-            value = self.get_value(act, context)
-            self.context.set_item_value(name, value)
-
-        elif s_name == 'command':
-            name = act['item_id']
-            value = self.get_value(act, context)
-            LOG.info('sending command \'%s\' to %s', value, name)
-            self.context.item_command(name, value)
-
-        elif s_name == 'log':
-            log_service(act.get('data'), context)
-
-        else:
-            LOG.error('invalid service name: %s', s_name)
-
-    @staticmethod
-    def get_value(act, context):
-        if not isinstance(act, dict):
-            return act
-
-        if 'value_template' in act:
-            t = Template(act['value_template'])
-            return t.render(**context)
-        else:
-            return act.get('value')
 
     def check_conditions(self):
         if 'condition' not in self.data:
@@ -211,7 +99,8 @@ class Rule(object):
                     last_run=self.last_run,
                     triggered=self.triggered,
                     last_time=self.last_time,
-                    active=self.active)
+                    active=self.active,
+                    condition=self.data.get('condition'))
 
     @staticmethod
     def check_condition(condition, context):
@@ -323,3 +212,188 @@ class Rule(object):
 
             else:
                 raise Exception('invalid operator \'{}\' in time'.format(k))
+
+    @asyncio.coroutine
+    def _run(self, d):
+        pass
+
+
+class ThermostatRule(AbstractRule):
+    def __init__(self, c):
+        self.name = c['name']
+        self.data = c
+        self.active = False
+        self.switch_item = c['thermostat']['switch_item']
+        self.sensor_item = c['thermostat']['sensor_item']
+        self.target_value_item = c['thermostat']['target_value_item']
+        self.actor_item = c['thermostat']['actor_item']
+        self.is_cooler = bool(c['thermostat'].get('is_cooler', False))
+        self.gist = float(c['thermostat'].get('gist', 1.0))
+        self.timeout = int(c['thermostat'].get('timeout', 60))
+        self.last_switch = 0
+
+    def check_item_change(self, name, val, old_val, age):
+        return name in (self.sensor_item, self.switch_item, self.target_value_item)
+
+    @asyncio.coroutine
+    def _run(self, d):
+        if self.context.get_item_value(self.switch_item) != ON:
+            return
+
+        t = self.context.get_item_value(self.sensor_item)
+        t_d = self.context.get_item_value(self.target_value_item)
+
+        if t is None or t_d is None:
+            LOG.error('emergency: temp sensor %s or thermostat %s value is None', self.sensor_item,
+                      self.target_value_item)
+            self.context.item_command(self.actor_item, OFF)
+            return
+
+        if time.time() - self.last_switch < self.timeout:
+            # do not switch too fast
+            return
+
+        LOG.debug('temp %s, target %s, switch %s', t, t_d, self.context.get_item_value(self.actor_item))
+
+        target_sw = None
+
+        if t >= t_d + self.gist / 2:
+            target_sw = ON if self.is_cooler else OFF
+        elif t <= t_d - self.gist / 2:
+            target_sw = OFF if self.is_cooler else ON
+
+        if target_sw is not None and self.context.get_item_value(self.actor_item) != target_sw:
+            self.last_switch = time.time()
+            LOG.info('value is %s, range is %s - %s, setting %s to %s', t, t_d - self.gist / 2, t_d + self.gist / 2,
+                     self.actor_item, target_sw)
+            self.context.item_command(self.actor_item, target_sw)
+
+    def to_dict(self):
+        d = AbstractRule.to_dict(self)
+        d['is_cooler'] = self.is_cooler
+        return d
+
+
+class Rule(AbstractRule):
+    def __init__(self, c):
+        self.name = c['name']
+        self.data = c
+        self.context = None
+        self.active = False
+        self.last_run = 0
+        self.triggered = ''
+        self.busy = False
+        self.last_time = 0
+
+        self.trigger = c['trigger']
+
+        self.time_based = False
+        if self.trigger.get('time'):
+            self.time_based = True
+        else:
+            for i in self.trigger.get('items', []):
+                if isinstance(i, dict) and i.get('for') is not None:
+                    self.time_based = True
+
+    def check_time(self, t=None):
+        """
+        check if rule must be fired
+        """
+        if t is None:
+            t = time.time()
+
+        if not self.time_based:
+            return None
+
+        tr = None
+
+        # check cron
+        if self.trigger.get('time') and t - self.last_run > 60:
+            cron_value = self.trigger['time'].strip()
+
+            v = check_cron_values(cron_value, t, self.last_run)
+            if v is not None:
+                tr = 'cron {}'.format(cron_value)
+
+        # check items
+        for i in self.trigger.get('items', []):
+            if isinstance(i, dict) and i.get('item_id') is not None and i.get('for') is not None:
+                item = self.context.items.get_item(i['item_id'])
+
+                if item is None:
+                    continue
+
+                td = i['for'].get('hours', 0) * 3600 + i['for'].get('minutes', 0) * 60 + i['for'].get('seconds', 0)
+
+                if item.value == i.get('to', ON) and item.age >= td:
+                    tr = 'item {} {} for {} s'.format(item.name, item.value, int(item.age))
+                    break
+
+        if tr is not None and not self.active:
+            self.active = True
+            return tr
+
+        self.active = tr is not None
+        return None
+
+    def check_item_change(self, name, val, old_val, age):
+        for i in self.trigger.get('items', []):
+            if isinstance(i, str):
+                if i == name:
+                    return True
+
+            if isinstance(i, dict) and i.get('for') is None:
+                if i.get('item_id') != name:
+                    continue
+
+                if i.get('from') is not None and i.get('from') != old_val:
+                    continue
+
+                if i.get('to') is not None and i.get('to') != val:
+                    continue
+
+                return True
+        return False
+
+    @asyncio.coroutine
+    def _run(self, context):
+        for act in self.data.get('action', []):
+            if 'service' in act:
+                LOG.info('running service %s', act['service'])
+                yield from self._do_service(act, context)
+            elif 'condition' in act:
+                if not self.check_condition(act, self.context):
+                    LOG.info('break on condition %s', act)
+                    break
+
+    @asyncio.coroutine
+    def _do_service(self, act, context):
+        s_name = act['service']
+
+        if s_name == 'set_state':
+            name = act['item_id']
+            value = self.get_value(act, context)
+            self.context.set_item_value(name, value)
+
+        elif s_name == 'command':
+            name = act['item_id']
+            value = self.get_value(act, context)
+            LOG.info('sending command \'%s\' to %s', value, name)
+            self.context.item_command(name, value)
+
+        elif s_name == 'log':
+            log_service(act.get('data'), context)
+
+        else:
+            LOG.error('invalid service name: %s', s_name)
+
+    @staticmethod
+    def get_value(act, context):
+        if not isinstance(act, dict):
+            return act
+
+        if 'value_template' in act:
+            t = Template(act['value_template'])
+            return t.render(**context)
+        else:
+            return act.get('value')

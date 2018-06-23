@@ -4,7 +4,7 @@ import functools
 import logging
 
 from .items import Items
-from .rules import Rule
+from .rules import AbstractRule
 
 CB_ONCHANGE = 'onchange'
 CB_ONCHECK = 'oncheck'
@@ -52,7 +52,7 @@ class Context(object):
             self.set_item_value(name, cmd, True)
 
     def add_rule(self, rule):
-        assert isinstance(rule, Rule)
+        assert isinstance(rule, AbstractRule)
         rule.context = self
         self.rules.append(rule)
 

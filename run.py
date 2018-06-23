@@ -22,7 +22,7 @@ from core import Context
 from core import http_server
 from core.context import CB_ONCHECK, CB_ONCHANGE
 from core.items import read_item
-from core.rules import Rule
+from core.rules import Rule, ThermostatRule
 
 LOG = logging.getLogger('mahno.' + __name__)
 RULES_LOG = logging.getLogger('mahno.core.rules')
@@ -36,7 +36,7 @@ class Main(object):
     coroutines = []
     actors = {}
 
-    def __init__(self):
+    def __init__(self, args):
         signal.signal(signal.SIGUSR1, self.debug)
         signal.signal(signal.SIGTERM, self.stop)
         self.loop = None
@@ -45,7 +45,7 @@ class Main(object):
         self.context = Context()
         self.context.add_cb(CB_ONCHANGE, self.on_item_change)
 
-        self.load_config()
+        self.load_config(args.config_dir or os.path.join(BASE_PATH, 'config'))
 
     def init_actors(self):
         mqtt_act = MqttActor()
@@ -113,18 +113,22 @@ class Main(object):
                 s.checked = st['checked']
                 # s.ttl = st.get('ttl', 0)
 
-    def load_config(self):
-        if os.path.isfile(os.path.join(BASE_PATH, 'config', 'config.yml')):
-            self.config = yaml.load(open(os.path.join(BASE_PATH, 'config', 'config.yml'), 'r', encoding='UTF-8'))
-        for s in os.listdir(os.path.join(BASE_PATH, 'config')):
+    def load_config(self, path):
+        if not os.path.isfile(os.path.join(path, 'config.yml')):
+            print('cannot read config from {}'.format(path))
+            sys.exit(1)
+
+        self.config = yaml.load(open(os.path.join(path, 'config.yml'), 'r', encoding='UTF-8'))
+
+        for s in os.listdir(path):
             if s.startswith('items_') and s.endswith('.yml'):
                 try:
-                    self.load_items_file(os.path.join(BASE_PATH, 'config', s))
+                    self.load_items_file(os.path.join(path, s))
                 except:
                     LOG.exception('yml items load')
             elif s.startswith('rules_') and s.endswith('.yml'):
                 try:
-                    self.load_rules_file(os.path.join(BASE_PATH, 'config', s))
+                    self.load_rules_file(os.path.join(path, s))
                 except:
                     LOG.exception('yml rules load')
 
@@ -145,7 +149,16 @@ class Main(object):
 
         n = 0
         for r in conf:
-            rule = Rule(r)
+            rule = None
+
+            if 'trigger' in r:
+                rule = Rule(r)
+            if 'thermostat' in r:
+                rule = ThermostatRule(r)
+
+            if not rule:
+                LOG.error('cannon make rule from definition %s', r)
+                continue
 
             self.context.add_rule(rule)
             n += 1
@@ -220,6 +233,7 @@ class Main(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', dest='config_dir')
     parser.add_argument('--debug', dest='debug', action='store_true')
     args = parser.parse_args()
 
@@ -259,4 +273,4 @@ if __name__ == '__main__':
     handler.setFormatter(logging.Formatter(log_format_rules))
     RULES_LOG.addHandler(handler)
 
-    Main().run()
+    Main(args).run()

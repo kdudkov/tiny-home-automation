@@ -117,7 +117,21 @@ class AbstractRule(object):
                 LOG.warning('no item %s', condition['item_id'])
                 return False
 
-            return item.value == condition['state']
+            op = condition.get('check', 'is')
+
+            if op == 'is':
+                return item.value == condition['state']
+            
+            elif op == 'not':
+                return item.value != condition['state']
+
+            elif op == 'in':
+                assert isinstance(condition['state'], (list, tuple))
+
+                return item.value in condition['state']
+            else:
+                LOG.error('invalid check \'%s\'', op)
+                return False
 
         elif ct == 'numeric_state':
             return Rule.check_condition_numeric(condition, context)

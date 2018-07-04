@@ -37,7 +37,7 @@ class Main(object):
     actors = {}
 
     def __init__(self, args):
-        signal.signal(signal.SIGUSR1, self.debug)
+        signal.signal(signal.SIGUSR1, self.load_items_rules)
         signal.signal(signal.SIGTERM, self.stop)
         self.loop = None
         self.config = {'server': {'port': 8880}}
@@ -45,7 +45,8 @@ class Main(object):
         self.context = Context()
         self.context.add_cb(CB_ONCHANGE, self.on_item_change)
 
-        self.load_config(args.config_dir or os.path.join(BASE_PATH, 'config'))
+        self.conf_dir = args.config_dir or os.path.join(BASE_PATH, 'config')
+        self.load_config()
 
     def init_actors(self):
         mqtt_act = MqttActor()
@@ -113,22 +114,30 @@ class Main(object):
                 s.checked = st['checked']
                 # s.ttl = st.get('ttl', 0)
 
-    def load_config(self, path):
-        if not os.path.isfile(os.path.join(path, 'config.yml')):
-            print('cannot read config from {}'.format(path))
+    def load_config(self):
+        LOG.info('loading config files from %s', self.conf_dir)
+
+        if not os.path.isfile(os.path.join(self.conf_dir, 'config.yml')):
+            LOG.error('no config.yml in {}'.format(self.conf_dir))
             sys.exit(1)
 
-        self.config = yaml.load(open(os.path.join(path, 'config.yml'), 'r', encoding='UTF-8'))
+        self.config = yaml.load(open(os.path.join(self.conf_dir, 'config.yml'), 'r', encoding='UTF-8'))
 
-        for s in os.listdir(path):
+        self.load_items_rules()
+
+    def load_items_rules(self):
+        LOG.info('loading items and rules')
+        self.context.rules = []
+
+        for s in os.listdir(self.conf_dir):
             if s.startswith('items_') and s.endswith('.yml'):
                 try:
-                    self.load_items_file(os.path.join(path, s))
+                    self.load_items_file(os.path.join(self.conf_dir, s))
                 except:
                     LOG.exception('yml items load')
             elif s.startswith('rules_') and s.endswith('.yml'):
                 try:
-                    self.load_rules_file(os.path.join(path, s))
+                    self.load_rules_file(os.path.join(self.conf_dir, s))
                 except:
                     LOG.exception('yml rules load')
 

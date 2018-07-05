@@ -8,7 +8,7 @@ from jinja2 import Template
 
 from core.cron import check_cron_values
 from core.items import ON, OFF
-from core.services import log_service
+from core.services import log_service, slack_service
 
 LOG = logging.getLogger('mahno.' + __name__)
 
@@ -397,6 +397,9 @@ class Rule(AbstractRule):
 
         elif s_name == 'log':
             log_service(act.get('data'), context)
+
+        elif s_name == 'slack':
+            yield from slack_service(act.get('data'), context)
 
         else:
             LOG.error('invalid service name: %s', s_name)

@@ -14,6 +14,7 @@ LOG = logging.getLogger('mahno.' + __name__)
 
 class Context(object):
     def __init__(self):
+        self.config = {}
         self.items = Items()
         self.actuators = {}
         self.rules = []

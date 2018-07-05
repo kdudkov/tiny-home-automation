@@ -40,9 +40,9 @@ class Main(object):
         signal.signal(signal.SIGUSR1, self.load_items_rules)
         signal.signal(signal.SIGTERM, self.stop)
         self.loop = None
-        self.config = {'server': {'port': 8880}}
 
         self.context = Context()
+        self.context.config = {'server': {'port': 8880}}
         self.context.add_cb(CB_ONCHANGE, self.on_item_change)
 
         self.conf_dir = args.config_dir or os.path.join(BASE_PATH, 'config')
@@ -52,25 +52,26 @@ class Main(object):
         mqtt_act = MqttActor()
         self.actors = {'mqtt': mqtt_act, 'astro': AstroActor()}
 
-        if self.config['mqtt'].get('out_topic'):
+        if self.context.config['mqtt'].get('out_topic'):
             self.context.add_cb(CB_ONCHECK, mqtt_act.send_out)
 
-        if 'modbus' in self.config:
-            LOG.info('add modbus actor host %s', self.config['modbus']['host'])
-            self.actors['modbus'] = ModbusActor(self.config['modbus']['host'], self.config['modbus']['port'])
+        if 'modbus' in self.context.config:
+            LOG.info('add modbus actor host %s', self.context.config['modbus']['host'])
+            self.actors['modbus'] = ModbusActor(self.context.config['modbus']['host'],
+                                                self.context.config['modbus']['port'])
 
-        if 'kodi' in self.config:
-            for k, v in self.config['kodi'].items():
+        if 'kodi' in self.context.config:
+            for k, v in self.context.config['kodi'].items():
                 LOG.info('add kodi actor %s, addr %s', k, v)
                 self.actors['kodi_' + k] = KodiActor(k, v)
 
-        if 'kankun' in self.config:
-            for k, v in self.config['kankun'].items():
+        if 'kankun' in self.context.config:
+            for k, v in self.context.config['kankun'].items():
                 LOG.info('add kankun actor %s, addr %s', k, v)
                 self.actors['kankun' + k] = KankunActor(k, v)
 
         for actor in self.actors.values():
-            self.do(actor.init, self.config, self.context)
+            self.do(actor.init, self.context.config, self.context)
 
         try:
             self.load_dump(DUMP_FILE)
@@ -121,8 +122,7 @@ class Main(object):
             LOG.error('no config.yml in {}'.format(self.conf_dir))
             sys.exit(1)
 
-        self.config = yaml.load(open(os.path.join(self.conf_dir, 'config.yml'), 'r', encoding='UTF-8'))
-
+        self.context.config = yaml.load(open(os.path.join(self.conf_dir, 'config.yml'), 'r', encoding='UTF-8'))
         self.load_items_rules()
 
     def load_items_rules(self):
@@ -224,11 +224,11 @@ class Main(object):
         for actor in self.actors.values():
             self.coroutines.append(asyncio.async(actor.loop(), loop=self.loop))
 
-        if self.actors.get('mqtt') and self.config['mqtt'].get('out_topic'):
+        if self.actors.get('mqtt') and self.context.config['mqtt'].get('out_topic'):
             self.coroutines.append(asyncio.async(self.actors.get('mqtt').periodical_sender(), loop=self.loop))
 
         try:
-            srv = http_server.get_app(self.context, self.config, self.loop)
+            srv = http_server.get_app(self.context, self.context.config, self.loop)
             asyncio.async(srv, loop=self.loop)
             self.loop.run_forever()
         finally:

@@ -370,36 +370,36 @@ class Rule(AbstractRule):
         return False
 
     @asyncio.coroutine
-    def _run(self, context):
+    def _run(self, rule_context):
         for act in self.data.get('action', []):
             if 'service' in act:
                 LOG.info('running service %s', act['service'])
-                yield from self._do_service(act, context)
+                yield from self._do_service(act, rule_context)
             elif 'condition' in act:
                 if not self.check_condition(act, self.context):
                     LOG.info('break on condition %s', act)
                     break
 
     @asyncio.coroutine
-    def _do_service(self, act, context):
+    def _do_service(self, act, rule_context):
         s_name = act['service']
 
         if s_name == 'set_state':
             name = act['item_id']
-            value = self.get_value(act, context)
+            value = self.get_value(act, rule_context)
             self.context.set_item_value(name, value)
 
         elif s_name == 'command':
             name = act['item_id']
-            value = self.get_value(act, context)
+            value = self.get_value(act, rule_context)
             LOG.info('sending command \'%s\' to %s', value, name)
             self.context.item_command(name, value)
 
         elif s_name == 'log':
-            log_service(act.get('data'), context)
+            log_service(act.get('data'), rule_context)
 
         elif s_name == 'slack':
-            yield from slack_service(act.get('data'), context)
+            yield from slack_service(act.get('data'), rule_context, self.context)
 
         else:
             LOG.error('invalid service name: %s', s_name)

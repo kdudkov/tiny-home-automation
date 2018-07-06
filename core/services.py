@@ -20,8 +20,8 @@ def log_service(data, context):
 
 
 @asyncio.coroutine
-def slack_service(data, context):
-    if not 'message' in data:
+def slack_service(data, rule_context, context):
+    if 'message' not in data:
         RULES_LOG.warning('empty message')
         return
 
@@ -32,10 +32,11 @@ def slack_service(data, context):
     session = yield from aiohttp.ClientSession(loop=context.loop)
     try:
         url = context.config['slack']['url']
-        t = Template(data['message']).render(context)
+        t = Template(data['message']).render(rule_context)
         r = yield from session.post(url, data=json.dumps(dict(message=t)), timeout=60)
-        text = yield from r.text()
+
         if r.status != 200:
+            text = yield from r.text()
             RULES_LOG.error('slack error %s %s', r.status, text)
     finally:
         yield from session.close()

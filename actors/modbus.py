@@ -89,6 +89,7 @@ def read_reg(seq, addr, reg, num=1):
 
 
 class ModbusActor(AbstractActor):
+    name = 'modbus'
     opened = False
     poll_list = []
     commands = collections.deque()
@@ -142,14 +143,10 @@ class ModbusActor(AbstractActor):
 
         writer.close()
 
-    def is_my_command(self, cmd, arg):
-        return cmd.startswith('modbus:')
-
     @asyncio.coroutine
-    def command(self, cmd, arg):
-        val = [0, 1][str(arg).lower() in ('1', 'on')]
-        fn, addr, reg = [int(x) for x in cmd[7:].split(':')]
-        self.commands.append({'fn': fn, 'addr': addr, 'reg': reg, 'val': val})
+    def command(self, args):
+        val = [0, 1][str(args['value']).lower() in ('1', 'on')]
+        self.commands.append({'fn': args['fn'], 'addr': args['addr'], 'reg': args['reg'], 'val': val})
 
     @asyncio.coroutine
     def send_message(self, writer, reader, msg):

@@ -149,7 +149,7 @@ class KodiActor(AbstractActor):
             except Exception as e:
                 LOG.exception('loop')
             if res:
-                self.context.set_item_value(self.get_name('state'), res['state'])
+                self.context.set_item_value(self.get_item_name('state'), res['state'])
                 name = ''
 
                 item = res.get('item', {})
@@ -164,17 +164,14 @@ class KodiActor(AbstractActor):
                         item.get('episode'),
                         item.get('title'))
 
-                self.context.set_item_value(self.get_name('item'), name)
+                self.context.set_item_value(self.get_item_name('item'), name)
 
             yield from asyncio.sleep(self.loop_time)
 
-    def is_my_command(self, cmd, arg):
-        return cmd.startswith('kodi:%s' % self.name)
-
     @asyncio.coroutine
-    def command(self, cmd, arg):
-        if cmd == 'kodi:%s:random' % self.name:
-            yield from self.kodi.play_random(arg)
+    def command(self, args):
+        if args.get('cmd') == 'random':
+            yield from self.kodi.play_random(args.get('name'))
 
-    def get_name(self, s):
+    def get_item_name(self, s):
         return 'kodi_%s_%s' % (self.name, s)

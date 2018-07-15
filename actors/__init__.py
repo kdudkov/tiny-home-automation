@@ -2,17 +2,15 @@ class AbstractActor(object):
     config = None
     context = None
     running = True
+    name = None
 
     def init(self, config, context):
         pass
 
-    def is_my_command(self, cmd, arg):
-        return False
-
     def loop(self):
         pass
 
-    def command(self, cmd, arg):
+    def command(self, args):
         pass
 
     def stop(self):

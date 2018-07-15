@@ -18,6 +18,7 @@ from actors.kankun import KankunActor
 from actors.kodi import KodiActor
 from actors.modbus import ModbusActor
 from actors.mqtt import MqttActor
+from actors.slack import SlackActor
 from core import Context
 from core import http_server
 from core.context import CB_ONCHECK, CB_ONCHANGE
@@ -70,8 +71,11 @@ class Main(object):
                 LOG.info('add kankun actor %s, addr %s', k, v)
                 self.actors['kankun' + k] = KankunActor(k, v)
 
+        if 'slack' in self.context.config:
+            self.actors['slack'] = SlackActor(self.context.config['slack']['url'])
+
         for actor in self.actors.values():
-            self.do(actor.init, self.context.config, self.context)
+            self.do_async(actor.init, self.context.config, self.context)
 
         try:
             self.load_dump(DUMP_FILE)
@@ -180,7 +184,7 @@ class Main(object):
                 try:
                     v = rule.check_time()
                     if v is not None:
-                        self.do(rule.process_cron, v)
+                        self.do_async(rule.process_cron, v)
                 except:
                     RULES_LOG.exception('cron worker on rule %s', rule.name)
 
@@ -191,7 +195,7 @@ class Main(object):
         for rule in self.context.rules:
             if rule.check_item_change(name, val, old_val, age):
                 try:
-                    self.do(rule.process_item_change, name, val, old_val, age)
+                    self.do_async(rule.process_item_change, name, val, old_val, age)
                 except:
                     RULES_LOG.exception('item change on rule %s', rule.name)
 
@@ -199,14 +203,14 @@ class Main(object):
     def commands_processor(self):
         while self.running:
             if self.context.commands:
-                cmd, arg = self.context.commands.popleft()
+                cmd, args = self.context.commands.popleft()
                 for actor in self.actors.values():
-                    if actor.is_my_command(cmd, arg):
-                        self.do(actor.command, cmd, arg)
+                    if actor.name == cmd:
+                        self.do_async(actor.command, args)
 
             yield from asyncio.sleep(0.01)
 
-    def do(self, fn, *args):
+    def do_async(self, fn, *args):
         if asyncio.iscoroutinefunction(fn):
             asyncio.async(fn(*args), loop=self.loop)
         else:
@@ -222,7 +226,7 @@ class Main(object):
             self.coroutines.append(asyncio.async(s, loop=self.loop))
 
         for actor in self.actors.values():
-            self.coroutines.append(asyncio.async(actor.loop(), loop=self.loop))
+            self.coroutines.append(self.do_async(actor.loop))
 
         if self.actors.get('mqtt') and self.context.config['mqtt'].get('out_topic'):
             self.coroutines.append(asyncio.async(self.actors.get('mqtt').periodical_sender(), loop=self.loop))

@@ -49,6 +49,8 @@ class Kankun(object):
 
 
 class KankunActor(AbstractActor):
+    name = 'kankun'
+
     def __init__(self, name, addr):
         self.name = name
         self.addr = addr
@@ -75,9 +77,6 @@ class KankunActor(AbstractActor):
                         self.context.set_item_value(item.name, res['state'])
             yield from asyncio.sleep(10)
 
-    def is_my_command(self, cmd, arg):
-        return cmd.startswith('kankun:%s' % self.name)
-
     @asyncio.coroutine
-    def command(self, cmd, arg):
-        yield from self.switch.post_command(arg)
+    def command(self, args):
+        yield from self.switch.post_command(args)

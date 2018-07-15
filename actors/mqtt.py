@@ -33,6 +33,8 @@ def match_topic(mask, topic):
 
 
 class MqttActor(AbstractActor):
+    name = 'mqtt'
+
     def __init__(self):
         self.mqtt_client = None
         self.send_time = {}
@@ -131,9 +133,6 @@ class MqttActor(AbstractActor):
                     LOG.info('running rule %s on signal %s, val %s', rule.__class__.__name__, topic, value)
                     asyncio.async(rule.process_signal(topic, value), loop=self.context.loop)
 
-    def is_my_command(self, cmd, arg):
-        return cmd.startswith('mqtt:')
-
     @asyncio.coroutine
     def wait_connected(self):
         while not self.connected:
@@ -193,8 +192,8 @@ class MqttActor(AbstractActor):
             LOG.exception('send out error: %s:%s', item.name, item.value)
 
     @asyncio.coroutine
-    def command(self, cmd, arg):
+    def command(self, args):
         if not (yield from self.wait_connected()):
             return
 
-        yield from self.mqtt_client.publish(cmd[5:], str(arg).encode('UTF-8'), 0)
+        yield from self.mqtt_client.publish(args['topic'], args['payload'].encode('UTF-8'), args.get('qos', 0))

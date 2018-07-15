@@ -13,6 +13,8 @@ deg = lambda x: x * 180 / math.pi
 
 
 class AstroActor(AbstractActor):
+    name = 'astro'
+
     def init(self, config, context):
         self.config = config
         self.context = context
@@ -31,10 +33,10 @@ class AstroActor(AbstractActor):
             yield from asyncio.sleep(300)
 
     def compute(self):
-        l = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', self.alt))
+        location = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', self.alt))
 
         # 15' sun bottom + 35' refraction
-        alt = l.solar_elevation()
+        alt = location.solar_elevation()
         daytime = 'day'
         daytime_ext = 'day'
         if -6 <= alt < -5. / 6:
@@ -52,12 +54,12 @@ class AstroActor(AbstractActor):
 
         self.context.set_item_value('daytime', daytime)
         self.context.set_item_value('daytime_ext', daytime_ext)
-        self.context.set_item_value('sun_alt', l.solar_elevation())
-        self.context.set_item_value('sun_az', l.solar_azimuth())
+        self.context.set_item_value('sun_alt', alt)
+        self.context.set_item_value('sun_az', location.solar_azimuth())
 
-        sun = l.sun()
+        sun = location.sun()
         self.context.set_item_value('sunrise', sun['sunrise'])
         self.context.set_item_value('sunset', sun['sunset'])
         self.context.set_item_value('noon', sun['noon'])
 
-        self.context.set_item_value('moon_phase', l.moon_phase())
+        self.context.set_item_value('moon_phase', location.moon_phase())

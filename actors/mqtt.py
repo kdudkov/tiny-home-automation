@@ -57,7 +57,7 @@ class MqttActor(AbstractActor):
                 packet = message.publish_packet
                 topic = packet.variable_header.topic_name
                 value = packet.payload.data.decode('utf-8')
-                self.check_topic(topic, value)
+                self.check_message(topic, value)
             except hbmqtt.client.ClientException as ce:
                 LOG.error('Client exception: %s' % ce)
                 self.connected = False
@@ -98,7 +98,7 @@ class MqttActor(AbstractActor):
         except:
             LOG.exception('error on disconnect')
 
-    def check_topic(self, topic, value):
+    def check_message(self, topic, value):
         LOG.debug('got topic %s, message %s', topic, value)
 
         # common topic for item commands
@@ -120,18 +120,13 @@ class MqttActor(AbstractActor):
             if rule.trigger is None or 'mqtt' not in rule.trigger:
                 continue
 
-            m = rule.trigger['mqtt']
-
-            if isinstance(m, (list, tuple)):
-                for mask in m:
-                    if match_topic(mask, topic):
-                        LOG.info('running rule %s on signal %s, val %s', rule.__class__.__name__, topic, value)
-                        asyncio.async(rule.process_signal(topic, value), loop=self.context.loop)
-                        break
-            else:
-                if match_topic(m, topic):
+            for v in rule.trigger['mqtt']:
+                if match_topic(v['topic'], topic):
+                    if 'payload' in v and v['payload'] != value:
+                        continue
                     LOG.info('running rule %s on signal %s, val %s', rule.__class__.__name__, topic, value)
                     asyncio.async(rule.process_signal(topic, value), loop=self.context.loop)
+                    break
 
     @asyncio.coroutine
     def wait_connected(self):

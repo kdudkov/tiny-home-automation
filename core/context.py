@@ -16,7 +16,7 @@ class Context(object):
     def __init__(self):
         self.config = {}
         self.items = Items()
-        self.actuators = {}
+        self.actors = {}
         self.rules = []
         self.commands = collections.deque()
         self.loop = None
@@ -43,10 +43,14 @@ class Context(object):
             return
 
         if item.config.get('output'):
-            self.commands.append((item.config.get('output'), cmd))
+            for actor in self.actors.values():
+                if actor.name == item.config['output'].get('channel'):
+                    msg = actor.format_simple_cmd(item.config['output'], cmd)
+                    LOG.info('sending msg %s to %s', msg, actor.name)
+                    self.commands.append((item.config['output']['channel'], msg))
 
             if item.config.get('fast_change'):
-                LOG.info('fast change set %s to %s', name, cmd)
+                LOG.debug('fast change set %s to %s', name, cmd)
                 self.set_item_value(name, cmd)
         else:
             LOG.info('directly set %s to %s', name, cmd)

@@ -72,6 +72,11 @@ class MqttActor(AbstractActor):
         yield from self.disconnect()
 
     @asyncio.coroutine
+    def stop(self):
+        self.running = False
+        yield from self.disconnect()
+
+    @asyncio.coroutine
     def connect(self):
         try:
             yield from self.mqtt_client.connect(self.config['mqtt']['url'])
@@ -185,6 +190,9 @@ class MqttActor(AbstractActor):
                 yield from self.mqtt_client.publish(topic.format(item.name), val, 1)
         except:
             LOG.exception('send out error: %s:%s', item.name, item.value)
+
+    def format_simple_cmd(self, d, cmd):
+        return dict(topic=d['topic'], payload=cmd, qos=d.get('qos', 0))
 
     @asyncio.coroutine
     def command(self, args):

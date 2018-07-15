@@ -15,3 +15,6 @@ class AbstractActor(object):
 
     def stop(self):
         self.running = False
+
+    def format_simple_cmd(self, d, cmd):
+        return cmd

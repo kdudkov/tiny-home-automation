@@ -143,6 +143,9 @@ class ModbusActor(AbstractActor):
 
         writer.close()
 
+    def format_simple_cmd(self, d, cmd):
+        return dict(fn=d['fn'], addr=d['addr'], reg=d['reg'], value=cmd)
+
     @asyncio.coroutine
     def command(self, args):
         val = [0, 1][str(args['value']).lower() in ('1', 'on')]

@@ -35,7 +35,6 @@ DUMP_FILE = os.path.join(BASE_PATH, 'mahno.dump')
 class Main(object):
     running = True
     coroutines = []
-    actors = {}
 
     def __init__(self, args):
         signal.signal(signal.SIGUSR1, self.load_items_rules)
@@ -51,30 +50,30 @@ class Main(object):
 
     def init_actors(self):
         mqtt_act = MqttActor()
-        self.actors = {'mqtt': mqtt_act, 'astro': AstroActor()}
+        self.context.actors = {'mqtt': mqtt_act, 'astro': AstroActor()}
 
         if self.context.config['mqtt'].get('out_topic'):
             self.context.add_cb(CB_ONCHECK, mqtt_act.send_out)
 
         if 'modbus' in self.context.config:
             LOG.info('add modbus actor host %s', self.context.config['modbus']['host'])
-            self.actors['modbus'] = ModbusActor(self.context.config['modbus']['host'],
-                                                self.context.config['modbus']['port'])
+            self.context.actors['modbus'] = ModbusActor(self.context.config['modbus']['host'],
+                                                        self.context.config['modbus']['port'])
 
         if 'kodi' in self.context.config:
             for k, v in self.context.config['kodi'].items():
                 LOG.info('add kodi actor %s, addr %s', k, v)
-                self.actors['kodi_' + k] = KodiActor(k, v)
+                self.context.actors['kodi_' + k] = KodiActor(k, v)
 
         if 'kankun' in self.context.config:
             for k, v in self.context.config['kankun'].items():
                 LOG.info('add kankun actor %s, addr %s', k, v)
-                self.actors['kankun' + k] = KankunActor(k, v)
+                self.context.actors['kankun' + k] = KankunActor(k, v)
 
         if 'slack' in self.context.config:
-            self.actors['slack'] = SlackActor(self.context.config['slack']['url'])
+            self.context.actors['slack'] = SlackActor(self.context.config['slack']['url'])
 
-        for actor in self.actors.values():
+        for actor in self.context.actors.values():
             self.do_async(actor.init, self.context.config, self.context)
 
         try:
@@ -204,7 +203,7 @@ class Main(object):
         while self.running:
             if self.context.commands:
                 cmd, args = self.context.commands.popleft()
-                for actor in self.actors.values():
+                for actor in self.context.actors.values():
                     if actor.name == cmd:
                         self.do_async(actor.command, args)
 
@@ -225,19 +224,20 @@ class Main(object):
         for s in [self.cron_checker(), self.commands_processor()]:
             self.coroutines.append(asyncio.async(s, loop=self.loop))
 
-        for actor in self.actors.values():
+        for actor in self.context.actors.values():
             self.coroutines.append(self.do_async(actor.loop))
 
-        if self.actors.get('mqtt') and self.context.config['mqtt'].get('out_topic'):
-            self.coroutines.append(asyncio.async(self.actors.get('mqtt').periodical_sender(), loop=self.loop))
+        if self.context.actors.get('mqtt') and self.context.config['mqtt'].get('out_topic'):
+            self.coroutines.append(asyncio.async(self.context.actors.get('mqtt').periodical_sender(), loop=self.loop))
 
         try:
             srv = http_server.get_app(self.context, self.context.config, self.loop)
             asyncio.async(srv, loop=self.loop)
             self.loop.run_forever()
         finally:
-            for actor in self.actors.values():
-                actor.stop()
+            for actor in self.context.actors.values():
+                self.do_async(actor.stop)
+
             self.running = False
             asyncio.wait(self.coroutines)
             self.save_dump(DUMP_FILE)

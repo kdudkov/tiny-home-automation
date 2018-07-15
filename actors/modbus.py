@@ -170,7 +170,11 @@ class ModbusActor(AbstractActor):
         n = int(msg.payload[0] / 2)
         for i in range(n):
             val = msg.payload[i * 2 + 1] * 256 + msg.payload[i * 2 + 2]
-            str = 'modbus:%s:%s:%s' % (msg.fn, msg.addr, reg + i)
+
             for item in self.context.items:
-                if item.input == str:
+                if not item.input or item.input.get('channel') != self.name:
+                    continue
+
+                inp = item.input
+                if inp.get('fn') == msg.fn and inp.get('addr') == msg.addr and inp.get('reg') == reg + i:
                     self.context.set_item_value(item.name, val)

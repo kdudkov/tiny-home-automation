@@ -57,7 +57,7 @@ class MqttActor(AbstractActor):
                 packet = message.publish_packet
                 topic = packet.variable_header.topic_name
                 value = packet.payload.data.decode('utf-8')
-                self.check_message(topic, value)
+                self.process_message(topic, value)
             except hbmqtt.client.ClientException as ce:
                 LOG.error('Client exception: %s' % ce)
                 self.connected = False
@@ -103,7 +103,7 @@ class MqttActor(AbstractActor):
         except:
             LOG.exception('error on disconnect')
 
-    def check_message(self, topic, value):
+    def process_message(self, topic, value):
         LOG.debug('got topic %s, message %s', topic, value)
 
         # common topic for item commands
@@ -117,7 +117,10 @@ class MqttActor(AbstractActor):
 
         # items input topic
         for t in self.context.items:
-            if t.input == 'mqtt:%s' % topic:
+            if not t.input or t.input.get('channel') != self.name:
+                continue
+
+            if t['input'].get('topic') == topic:
                 self.context.set_item_value(t['name'], value)
 
         # signals

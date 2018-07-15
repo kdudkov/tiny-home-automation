@@ -1,14 +1,18 @@
 ---
 - name: out_temp
   type: number
-  input: mqtt:esp01/ESP00A0D40D/sensors/dsw1
+  input:
+    channel: mqtt
+    topic: esp01/ESP00A0D40D/sensors/dsw1
   ttl: 180
   format: '{:.1f} °C'
   tags: [temperature, out]
 
 - name: room_temp
   type: number
-  input: mqtt:esp01/ESP00A0D40D/sensors/dsw2
+  input:
+    channel: mqtt
+    topic: esp01/ESP00A0D40D/sensors/dsw2
   ttl: 180
   format: '{:.1f} °C'
   tags: [temperature, room]

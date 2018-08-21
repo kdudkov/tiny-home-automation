@@ -121,7 +121,12 @@ class ModbusActor(AbstractActor):
             if not self.running:
                 break
             if not self.opened:
-                reader, writer = yield from asyncio.open_connection(self.addr, self.port, loop=self.context.loop)
+                try:
+                    reader, writer = yield from asyncio.open_connection(self.addr, self.port, loop=self.context.loop)
+                except:
+                    LOG.exception('connection open error')
+                    yield from asyncio.sleep(2)
+                    continue
                 self.opened = True
                 LOG.info('modbus connected')
             try:

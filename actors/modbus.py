@@ -113,8 +113,7 @@ class ModbusActor(AbstractActor):
         LOG.info(self.poll_list)
         self.generator = self.__next_command_generator()
 
-    @asyncio.coroutine
-    def loop(self):
+    async def loop(self):
         reader = None
         writer = None
         for p in self.generator:
@@ -122,10 +121,10 @@ class ModbusActor(AbstractActor):
                 break
             if not self.opened:
                 try:
-                    reader, writer = yield from asyncio.open_connection(self.addr, self.port, loop=self.context.loop)
+                    reader, writer = await asyncio.open_connection(self.addr, self.port, loop=self.context.loop)
                 except:
                     LOG.exception('connection open error')
-                    yield from asyncio.sleep(2)
+                    await asyncio.sleep(2)
                     continue
                 self.opened = True
                 LOG.info('modbus connected')
@@ -133,35 +132,33 @@ class ModbusActor(AbstractActor):
                 if p['fn'] == 3:
                     # LOG.debug('fn %s to %s', p['fn'], p['addr'])
                     fut = self.send_message(writer, reader, read_reg(0, p['addr'], p['reg'], p.get('size', 1)))
-                    msg = yield from asyncio.wait_for(fut, timeout=2)
+                    msg = await asyncio.wait_for(fut, timeout=2)
                     if msg:
-                        yield from self.process_message(msg, p['reg'])
+                        await self.process_message(msg, p['reg'])
                 if p['fn'] == 6:
                     fut = self.send_message(writer, reader, write_reg(0, p['addr'], p['reg'], p['val']))
-                    msg = yield from asyncio.wait_for(fut, timeout=2)
+                    msg = await asyncio.wait_for(fut, timeout=2)
 
             except:
                 self.opened = False
                 LOG.exception('loop error')
-                yield from asyncio.sleep(3)
-            yield from asyncio.sleep(0.2)
+                await asyncio.sleep(3)
+            await asyncio.sleep(0.2)
 
         writer.close()
 
     def format_simple_cmd(self, d, cmd):
         return dict(fn=d['fn'], addr=d['addr'], reg=d['reg'], value=cmd)
 
-    @asyncio.coroutine
-    def command(self, args):
+    async def command(self, args):
         val = [0, 1][str(args['value']).lower() in ('1', 'on')]
         self.commands.append({'fn': args['fn'], 'addr': args['addr'], 'reg': args['reg'], 'val': val})
 
-    @asyncio.coroutine
-    def send_message(self, writer, reader, msg):
+    async def send_message(self, writer, reader, msg):
         try:
             writer.write(bytes(msg.to_list()))
-            yield from writer.drain()
-            data = yield from reader.read(256)
+            await writer.drain()
+            data = await reader.read(256)
             return TcpMessage.decode_tcp(data)
         except Exception as e:
             try:
@@ -170,8 +167,7 @@ class ModbusActor(AbstractActor):
                 pass
             raise e
 
-    @asyncio.coroutine
-    def process_message(self, msg, reg):
+    async def process_message(self, msg, reg):
         n = int(msg.payload[0] / 2)
         for i in range(n):
             val = msg.payload[i * 2 + 1] * 256 + msg.payload[i * 2 + 2]

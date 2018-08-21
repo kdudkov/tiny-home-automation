@@ -34,7 +34,7 @@ DUMP_FILE = os.path.join(BASE_PATH, 'mahno.dump')
 
 class Main(object):
     running = True
-    coroutines = []
+    futs = []
 
     def __init__(self, args):
         signal.signal(signal.SIGUSR1, self.load_items_rules)
@@ -74,7 +74,7 @@ class Main(object):
             self.context.actors['slack'] = SlackActor(self.context.config['slack']['url'])
 
         for actor in self.context.actors.values():
-            self.do_async(actor.init, self.context.config, self.context)
+            actor.init(self.context.config, self.context)
 
         try:
             self.load_dump(DUMP_FILE)
@@ -176,8 +176,7 @@ class Main(object):
             n += 1
         LOG.info('load %s rules from file %s', n, fname)
 
-    @asyncio.coroutine
-    def cron_checker(self):
+    async def cron_checker(self):
         while self.running:
             for rule in self.context.rules:
                 try:
@@ -187,10 +186,9 @@ class Main(object):
                 except:
                     RULES_LOG.exception('cron worker on rule %s', rule.name)
 
-            yield from asyncio.sleep(0.5)
+            await asyncio.sleep(0.5)
 
-    @asyncio.coroutine
-    def on_item_change(self, name, val, old_val, age):
+    async def on_item_change(self, name, val, old_val, age):
         for rule in self.context.rules:
             if rule.check_item_change(name, val, old_val, age):
                 try:
@@ -198,8 +196,7 @@ class Main(object):
                 except:
                     RULES_LOG.exception('item change on rule %s', rule.name)
 
-    @asyncio.coroutine
-    def commands_processor(self):
+    async def commands_processor(self):
         while self.running:
             if self.context.commands:
                 cmd, args = self.context.commands.popleft()
@@ -207,39 +204,40 @@ class Main(object):
                     if actor.name == cmd:
                         self.do_async(actor.command, args)
 
-            yield from asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
 
     def do_async(self, fn, *args):
         if asyncio.iscoroutinefunction(fn):
-            asyncio.async(fn(*args), loop=self.loop)
+            asyncio.ensure_future(fn(*args), loop=self.loop)
         else:
             self.loop.call_soon(functools.partial(fn, *args))
 
     def run(self):
         self.loop = asyncio.get_event_loop()
         self.context.loop = self.loop
-        self.coroutines = []
+        self.futs = []
         self.init_actors()
 
         for s in [self.cron_checker(), self.commands_processor()]:
-            self.coroutines.append(asyncio.async(s, loop=self.loop))
+            self.futs.append(asyncio.ensure_future(s))
 
         for actor in self.context.actors.values():
-            self.coroutines.append(self.do_async(actor.loop))
+            self.futs.append(asyncio.ensure_future(actor.loop()))
 
         if self.context.actors.get('mqtt') and self.context.config['mqtt'].get('out_topic'):
-            self.coroutines.append(asyncio.async(self.context.actors.get('mqtt').periodical_sender(), loop=self.loop))
+            self.futs.append(asyncio.ensure_future(self.context.actors.get('mqtt').periodical_sender()))
 
         try:
             srv = http_server.get_app(self.context, self.context.config, self.loop)
-            asyncio.async(srv, loop=self.loop)
+            asyncio.ensure_future(srv, loop=self.loop)
             self.loop.run_forever()
         finally:
-            for actor in self.context.actors.values():
-                self.do_async(actor.stop)
-
             self.running = False
-            asyncio.wait(self.coroutines)
+
+            for x in self.context.actors.values():
+                self.do_async(x.stop)
+
+            asyncio.wait(self.futs, loop=self.loop)
             self.save_dump(DUMP_FILE)
             self.loop.close()
 

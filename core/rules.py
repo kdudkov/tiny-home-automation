@@ -1,5 +1,4 @@
 # coding: UTF-8
-import asyncio
 import logging
 import time
 from datetime import datetime as dt
@@ -31,8 +30,7 @@ class AbstractRule(object):
     def check_item_change(self, name, val, old_val, age):
         pass
 
-    @asyncio.coroutine
-    def process_item_change(self, name, val, old_val, age):
+    async def process_item_change(self, name, val, old_val, age):
         d = dict(
             type='item_change',
             name=name,
@@ -40,10 +38,9 @@ class AbstractRule(object):
             old_value=old_val,
             triggered='item {} {} -> {}'.format(name, old_val, val)
         )
-        yield from self._try_process(d)
+        await self._try_process(d)
 
-    @asyncio.coroutine
-    def process_signal(self, topic, val):
+    async def process_signal(self, topic, val):
         d = dict(
             type='mqtt',
             name=topic,
@@ -51,10 +48,9 @@ class AbstractRule(object):
             old_value=None,
             triggered='mqtt {}: {}'.format(topic, val)
         )
-        yield from self._try_process(d)
+        await self._try_process(d)
 
-    @asyncio.coroutine
-    def process_cron(self, v):
+    async def process_cron(self, v):
         d = dict(
             type='cron',
             name=None,
@@ -62,10 +58,9 @@ class AbstractRule(object):
             old_value=None,
             triggered=v
         )
-        yield from self._try_process(d)
+        await self._try_process(d)
 
-    @asyncio.coroutine
-    def _try_process(self, d):
+    async def _try_process(self, d):
         if self.busy:
             LOG.warning('rule %s is busy', self.name)
             return
@@ -80,7 +75,7 @@ class AbstractRule(object):
         try:
             self.last_run = time.time()
             self.triggered = d['triggered']
-            yield from self._run(d)
+            await self._run(d)
         except:
             LOG.exception('error in rule %s', self.name)
         finally:
@@ -227,8 +222,7 @@ class AbstractRule(object):
             else:
                 raise Exception('invalid operator \'{}\' in time'.format(k))
 
-    @asyncio.coroutine
-    def _run(self, d):
+    async def _run(self, d):
         pass
 
 
@@ -249,8 +243,7 @@ class ThermostatRule(AbstractRule):
     def check_item_change(self, name, val, old_val, age):
         return name in (self.sensor_item, self.switch_item, self.target_value_item)
 
-    @asyncio.coroutine
-    def _run(self, d):
+    async def _run(self, d):
         if self.context.get_item_value(self.switch_item) != ON:
             return
 
@@ -369,19 +362,17 @@ class Rule(AbstractRule):
                 return True
         return False
 
-    @asyncio.coroutine
-    def _run(self, rule_context):
+    async def _run(self, rule_context):
         for act in self.data.get('action', []):
             if 'service' in act:
                 LOG.info('running service %s', act['service'])
-                yield from self._do_service(act, rule_context)
+                await self._do_service(act, rule_context)
             elif 'condition' in act:
                 if not self.check_condition(act, self.context):
                     LOG.info('break on condition %s', act)
                     break
 
-    @asyncio.coroutine
-    def _do_service(self, act, rule_context):
+    async def _do_service(self, act, rule_context):
         s_name = act['service']
 
         if s_name == 'set_state':
@@ -399,7 +390,7 @@ class Rule(AbstractRule):
             log_service(act.get('data'), rule_context)
 
         elif s_name == 'slack':
-            yield from slack_service(act.get('data'), rule_context, self.context)
+            await slack_service(act.get('data'), rule_context, self.context)
 
         else:
             LOG.error('invalid service name: %s', s_name)

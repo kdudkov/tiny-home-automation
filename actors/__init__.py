@@ -7,10 +7,10 @@ class AbstractActor(object):
     def init(self, config, context):
         pass
 
-    def loop(self):
+    async def loop(self):
         pass
 
-    def command(self, args):
+    async def command(self, args):
         pass
 
     def stop(self):

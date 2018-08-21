@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 
@@ -19,18 +18,16 @@ class SlackActor(AbstractActor):
         self.config = config
         self.context = context
 
-    @asyncio.coroutine
-    def send_message(self, msg):
+    async def send_message(self, msg):
         session = aiohttp.ClientSession(loop=self.context.loop)
         try:
-            r = yield from session.post(self.url, data=json.dumps(dict(text=msg)), timeout=60)
+            r = await session.post(self.url, data=json.dumps(dict(text=msg)), timeout=60)
 
             if r.status != 200:
-                text = yield from r.text()
+                text = await r.text()
                 LOG.error('slack error %s %s', r.status, text)
         finally:
-            yield from session.close()
+            await session.close()
 
-    @asyncio.coroutine
-    def command(self, args):
-        yield from self.send_message(args)
+    async def command(self, args):
+        await self.send_message(args)

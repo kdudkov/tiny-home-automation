@@ -243,9 +243,12 @@ class ThermostatRule(AbstractRule):
     def check_item_change(self, name, val, old_val, age):
         return name in (self.sensor_item, self.switch_item, self.target_value_item)
 
-    async def _run(self, d):
+    def check_conditions(self):
+        if not AbstractRule.check_conditions(self):
+            return False
+
         if self.context.get_item_value(self.switch_item) != ON:
-            return
+            return False
 
         t = self.context.get_item_value(self.sensor_item)
         t_d = self.context.get_item_value(self.target_value_item)
@@ -254,11 +257,17 @@ class ThermostatRule(AbstractRule):
             LOG.error('emergency: temp sensor %s or thermostat %s value is None', self.sensor_item,
                       self.target_value_item)
             self.context.item_command(self.actor_item, OFF)
-            return
+            return False
 
         if time.time() - self.last_switch < self.timeout:
             # do not switch too fast
-            return
+            return False
+
+        return True
+
+    async def _run(self, d):
+        t = self.context.get_item_value(self.sensor_item)
+        t_d = self.context.get_item_value(self.target_value_item)
 
         LOG.debug('temp %s, target %s, switch %s', t, t_d, self.context.get_item_value(self.actor_item))
 

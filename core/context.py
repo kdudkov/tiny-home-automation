@@ -22,9 +22,9 @@ class Context(object):
         self.loop = None
         self.callbacks = {}
 
-    def do(self, fn, *args):
+    def do_async(self, fn, *args):
         if asyncio.iscoroutinefunction(fn):
-            asyncio.async(fn(*args), loop=self.loop)
+            asyncio.ensure_future(fn(*args), loop=self.loop)
         else:
             self.loop.call_soon(functools.partial(fn, *args))
 
@@ -96,4 +96,4 @@ class Context(object):
     def run_cb(self, name, *args):
         for cb in self.callbacks.get(name, []):
             if cb:
-                self.do(cb, *args)
+                self.do_async(cb, *args)

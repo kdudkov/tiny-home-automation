@@ -10,17 +10,16 @@ LOG = logging.getLogger('mahno.' + __name__)
 
 
 class WebSocket(web.View):
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         ws = web.WebSocketResponse()
         h = hash(ws)
-        yield from ws.prepare(self.request)
+        await ws.prepare(self.request)
         LOG.info('ws client connected, %s clients', len(self.request.app['websockets']) + 1)
         self.request.app['websockets'][h] = {'ws': ws, 'tag': ''}
 
         try:
             while 1:
-                msg = yield from ws.receive_str()
+                msg = await ws.receive_str()
                 if ';' in msg:
                     tag, name, cmd = msg.split(';')
                     self.request.app['websockets'][h]['tag'] = tag
@@ -29,11 +28,11 @@ class WebSocket(web.View):
                     self.request.app['websockets'][h]['tag'] = msg
                     LOG.info('got tag %s for %s', msg, h)
                 LOG.debug('ws msg: %s', msg)
-                yield from asyncio.sleep(0.01)
+                await asyncio.sleep(0.01)
         finally:
             if not ws.closed:
                 try:
-                    ws.close()
+                    await ws.close()
                 except:
                     pass
             del(self.request.app['websockets'][h])
@@ -73,70 +72,61 @@ class Server(web.Application):
     def resp_404(self, s):
         return web.Response(body=s.encode('UTF-8'), status=404)
 
-    @asyncio.coroutine
-    def index(self, request):
+    async def index(self, request):
         return web.Response(body=open('static/index.html').read().encode('UTF-8'), content_type='text/html')
 
-    @asyncio.coroutine
-    def index2(self, request):
+    async def index2(self, request):
         return web.Response(body=open('static/index2.html').read().encode('UTF-8'), content_type='text/html')
 
-    @asyncio.coroutine
-    def get_items(self, request):
+    async def get_items(self, request):
         tag = request.match_info.get('tag')
         return self.json_resp(self.context.items.as_list(tag))
 
-    @asyncio.coroutine
-    def get_item(self, request):
+    async def get_item(self, request):
         name = request.match_info['name']
         item = self.context.items.get_item(name)
         if not item:
             return self.resp_404('item %s not found' % name)
         return self.json_resp(item.to_dict())
 
-    @asyncio.coroutine
-    def get_item_value(self, request):
+    async def get_item_value(self, request):
         name = request.match_info['name']
         item = self.context.items.get_item(name)
         if not item:
             return self.resp_404('item %s not found' % name)
         return web.Response(body=str(item.value).encode('UTF-8'))
 
-    @asyncio.coroutine
-    def put_item(self, request):
+    async def put_item(self, request):
         name = request.match_info['name']
         item = self.context.items.get_item(name)
         if not item:
             return self.resp_404('')
-        val = yield from request.payload.read()
+        val = await request.payload.read()
         self.context.set_item_value(name, val.decode('utf-8'))
         return self.json_resp(item.to_dict())
 
-    @asyncio.coroutine
-    def post_item(self, request):
+    async def post_item(self, request):
         name = request.match_info['name']
         item = self.context.items.get_item(name)
         if not item:
             return self.resp_404('')
-        val = yield from request.content.read()
+        val = await request.content.read()
         self.context.item_command(name, val.decode('utf-8'))
         return self.json_resp(item.to_dict())
 
-    @asyncio.coroutine
-    def get_rules(self, request):
+    async def get_rules(self, request):
         res = []
         for r in self.context.rules:
             res.append(r.to_dict())
 
         return self.json_resp(res)
 
-    @asyncio.coroutine
-    def on_check(self, item, changed):
+    async def on_check(self, item, changed):
         s = json.dumps(item.to_dict())
         for ws in self['websockets'].values():
             if ws['tag'] and ws['tag'] in item.tags:
                 try:
-                    yield from ws['ws'].send_str(s)
+                    await ws['ws'].send_str(s)
                 except:
                     pass
 

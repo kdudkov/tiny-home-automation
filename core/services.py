@@ -1,6 +1,5 @@
 # coding: UTF-8
 
-import asyncio
 import logging
 
 from jinja2 import Template
@@ -17,7 +16,6 @@ def log_service(data, context):
         RULES_LOG.warning('empty message')
 
 
-@asyncio.coroutine
 def slack_service(data, rule_context, context):
     if 'message' not in data:
         RULES_LOG.warning('empty message')

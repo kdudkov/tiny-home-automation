@@ -23,14 +23,13 @@ class AstroActor(AbstractActor):
         self.lon = coords['lon']
         self.alt = coords.get('alt', 0)
 
-    @asyncio.coroutine
-    def loop(self):
+    async def loop(self):
         while self.running:
             try:
                 self.compute()
             except:
                 LOG.exception('')
-            yield from asyncio.sleep(300)
+            await asyncio.sleep(300)
 
     def compute(self):
         location = Location(('name', 'reg', self.lat, self.lon, 'Europe/Moscow', self.alt))

@@ -45,15 +45,14 @@ class MqttActor(AbstractActor):
         self.context = context
         self.mqtt_client = hbmqtt.client.MQTTClient(config={'auto_reconnect': False})
 
-    @asyncio.coroutine
-    def loop(self):
+    async def loop(self):
         self.connected = False
 
         while self.running:
             if not self.connected:
-                self.connected = yield from self.connect()
+                self.connected = await self.connect()
             try:
-                message = yield from self.mqtt_client.deliver_message()
+                message = await self.mqtt_client.deliver_message()
                 packet = message.publish_packet
                 topic = packet.variable_header.topic_name
                 value = packet.payload.data.decode('utf-8')
@@ -66,21 +65,18 @@ class MqttActor(AbstractActor):
                 self.connected = False
 
             if not self.connected:
-                yield from self.disconnect()
-                yield from asyncio.sleep(1)
+                await self.disconnect()
+                await asyncio.sleep(1)
 
-        yield from self.disconnect()
+        await self.disconnect()
 
-    @asyncio.coroutine
     def stop(self):
         self.running = False
-        yield from self.disconnect()
 
-    @asyncio.coroutine
-    def connect(self):
+    async def connect(self):
         try:
-            yield from self.mqtt_client.connect(self.config['mqtt']['url'])
-            yield from self.mqtt_client.subscribe([
+            await self.mqtt_client.connect(self.config['mqtt']['url'])
+            await self.mqtt_client.subscribe([
                 ('#', 0),
                 ('#', 1),
             ])
@@ -96,10 +92,9 @@ class MqttActor(AbstractActor):
             LOG.exception('error on connect')
             return False
 
-    @asyncio.coroutine
-    def disconnect(self):
+    async def disconnect(self):
         try:
-            yield from self.mqtt_client.disconnect()
+            await self.mqtt_client.disconnect()
         except:
             LOG.exception('error on disconnect')
 
@@ -133,42 +128,39 @@ class MqttActor(AbstractActor):
                     if 'payload' in v and v['payload'] != value:
                         continue
                     LOG.info('running rule %s on signal %s, val %s', rule.__class__.__name__, topic, value)
-                    asyncio.async(rule.process_signal(topic, value), loop=self.context.loop)
+                    asyncio.ensure_future(rule.process_signal(topic, value), loop=self.context.loop)
                     break
 
-    @asyncio.coroutine
-    def wait_connected(self):
+    async def wait_connected(self):
         while not self.connected:
-            yield from asyncio.sleep(1)
+            await asyncio.sleep(1)
 
             if not self.running:
                 break
 
         return self.running
 
-    @asyncio.coroutine
-    def periodical_sender(self):
+    async def periodical_sender(self):
         if not self.config['mqtt'].get('out_topic'):
             LOG.warning('no out topic configured')
             return
 
         while self.running:
             for item in self.context.items:
-                if not (yield from self.wait_connected()):
+                if not (await self.wait_connected()):
                     break
 
                 t = self.send_time.get(item.name, 0)
 
                 if time.time() - t <= self.config['mqtt'].get('send_time', 30):
-                    yield from asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)
                     continue
 
-                yield from self.send_out(item, False)
+                await self.send_out(item, False)
 
-                yield from asyncio.sleep(0.1)
+                await asyncio.sleep(0.1)
 
-    @asyncio.coroutine
-    def send_out(self, item, changed):
+    async def send_out(self, item, changed):
         topic = self.config['mqtt'].get('out_topic')
 
         if not topic:
@@ -184,22 +176,21 @@ class MqttActor(AbstractActor):
         try:
             val = str(item.value).encode('UTF-8') if item.value is not None else bytes()
 
-            if not (yield from self.wait_connected()):
+            if not (await self.wait_connected()):
                 return
 
-            yield from self.mqtt_client.publish(topic.format(item.name), val, 0)
+            await self.mqtt_client.publish(topic.format(item.name), val, 0)
 
             if changed:
-                yield from self.mqtt_client.publish(topic.format(item.name), val, 1)
+                await self.mqtt_client.publish(topic.format(item.name), val, 1)
         except:
             LOG.exception('send out error: %s:%s', item.name, item.value)
 
     def format_simple_cmd(self, d, cmd):
         return dict(topic=d['topic'], payload=cmd, qos=d.get('qos', 0))
 
-    @asyncio.coroutine
-    def command(self, args):
-        if not (yield from self.wait_connected()):
+    async def command(self, args):
+        if not (await self.wait_connected()):
             return
 
-        yield from self.mqtt_client.publish(args['topic'], args['payload'].encode('UTF-8'), args.get('qos', 0))
+        await self.mqtt_client.publish(args['topic'], args['payload'].encode('UTF-8'), args.get('qos', 0))

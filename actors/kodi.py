@@ -22,13 +22,18 @@ class Kodi(object):
         self.addr = addr
         self.loop = loop
 
-    @asyncio.coroutine
+    async def stop(self):
+        if self.session:
+            try:
+                await self.session.close()
+            except:
+                pass
+
     def init(self):
         self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth(self.user, self.passwd),
                                              loop=self.loop)
 
-    @asyncio.coroutine
-    def req(self, fn, params=None):
+    async def req(self, fn, params=None):
         req = {'jsonrpc': '2.0', 'id': 1, 'method': fn}
 
         if params:
@@ -37,75 +42,69 @@ class Kodi(object):
         if self.session is None:
             raise Exception('no session!')
 
-        resp = yield from self.session.get(
+        resp = await self.session.get(
             'http://%s/jsonrpc' % self.addr, params={'request': json.dumps(req)}, timeout=self.timeout)
 
         if resp.status != 200:
             raise Exception('http %s' % resp.status)
         try:
-            res = yield from resp.json()
+            res = await resp.json()
             if 'result' not in res:
                 raise Exception('error')
             return res['result']
         finally:
-            yield from resp.release()
+            await resp.release()
 
-    @asyncio.coroutine
-    def find_serial(self, name):
-        res = yield from self.req('VideoLibrary.GetTVShows')
+    async def find_serial(self, name):
+        res = await self.req('VideoLibrary.GetTVShows')
         for r in res.get('tvshows', []):
             if name in r.get('label'):
                 return r
 
-    @asyncio.coroutine
-    def get_serial_episodes(self, sid, season=None):
+    async def get_serial_episodes(self, sid, season=None):
         r = {'tvshowid': sid, 'properties': ['showtitle', 'season', 'episode', 'title', 'playcount']}
         if season:
             r['season'] = season
 
-        res = yield from self.req('VideoLibrary.GetEpisodes', r)
+        res = await self.req('VideoLibrary.GetEpisodes', r)
         return [x for x in res.get('episodes', [])]
 
-    @asyncio.coroutine
-    def get_episode_details(self, eid):
+    async def get_episode_details(self, eid):
         r = {'episodeid': eid}
 
-        res = yield from self.req('VideoLibrary.GetEpisodeDetails', r)
+        res = await self.req('VideoLibrary.GetEpisodeDetails', r)
         return res
 
-    @asyncio.coroutine
-    def get_status(self):
+    async def get_status(self):
         try:
-            res = yield from self.req('Player.GetActivePlayers')
+            res = await self.req('Player.GetActivePlayers')
         except Exception as e:
             LOG.debug('error: %s', e)
             return {'state': 'OFF'}
 
         if res:
             pid = res[0]['playerid']
-            ans = yield from self.req('Player.GetProperties', {'playerid': pid, 'properties': ['speed']})
+            ans = await self.req('Player.GetProperties', {'playerid': pid, 'properties': ['speed']})
             res = {'state': 'PAUSE' if ans['speed'] == 0 else 'PLAY'}
-            ans = yield from self.req('Player.GetItem',
-                                      {'playerid': pid,
+            ans = await self.req('Player.GetItem',
+                                 {'playerid': pid,
                                        'properties': ['showtitle', 'season', 'episode', 'title']})
             res.update(ans)
             return res
         else:
             return {'state': 'STOP'}
 
-    @asyncio.coroutine
-    def play_episode(self, epid):
-        res = yield from self.req('Player.Open', {'item': {'episodeid': epid}})
+    async def play_episode(self, epid):
+        res = await self.req('Player.Open', {'item': {'episodeid': epid}})
         return res
 
-    @asyncio.coroutine
-    def play_random(self, name, max_season=3):
-        stat = yield from self.get_status()
+    async def play_random(self, name, max_season=3):
+        stat = await self.get_status()
         if stat['state'] == 'OFF':
             LOG.warning('%s is off', self.addr)
             return
 
-        ser = yield from self.find_serial(name)
+        ser = await self.find_serial(name)
         if not ser:
             LOG.warning('%s is not found', name)
             return
@@ -113,14 +112,14 @@ class Kodi(object):
 
         episodes = []
         for i in range(max_season + 1):
-            res = yield from self.get_serial_episodes(sid, i)
+            res = await self.get_serial_episodes(sid, i)
             for r in res:
                 episodes.append(r)
 
         random.seed()
         e = random.choice(episodes)
         LOG.info('playing %s', e.get('label'))
-        yield from self.play_episode(e['episodeid'])
+        await self.play_episode(e['episodeid'])
         return e
 
 
@@ -131,19 +130,17 @@ class KodiActor(AbstractActor):
         self.kodi = None
         self.loop_time = 3
 
-    @asyncio.coroutine
     def init(self, config, context):
         self.config = config
         self.context = context
         self.kodi = Kodi(self.addr, self.context.loop)
-        yield from self.kodi.init()
+        self.kodi.init()
 
-    @asyncio.coroutine
-    def loop(self):
+    async def loop(self):
         while self.running:
             res = None
             try:
-                res = yield from self.kodi.get_status()
+                res = await self.kodi.get_status()
             except asyncio.TimeoutError:
                 LOG.error('timeout talking to %s', self.addr)
             except Exception as e:
@@ -166,12 +163,14 @@ class KodiActor(AbstractActor):
 
                 self.context.set_item_value(self.get_item_name('item'), name)
 
-            yield from asyncio.sleep(self.loop_time)
+            await asyncio.sleep(self.loop_time)
 
-    @asyncio.coroutine
-    def command(self, args):
+        LOG.info('kodi actor finished')
+        await self.kodi.stop()
+
+    async def command(self, args):
         if args.get('cmd') == 'random':
-            yield from self.kodi.play_random(args.get('name'))
+            await self.kodi.play_random(args.get('name'))
 
     def get_item_name(self, s):
         return 'kodi_%s_%s' % (self.name, s)

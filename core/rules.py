@@ -375,7 +375,10 @@ class Rule(AbstractRule):
         for act in self.data.get('action', []):
             if 'service' in act:
                 LOG.info('running service %s', act['service'])
-                await self._do_service(act, rule_context)
+                try:
+                    await self._do_service(act, rule_context)
+                except:
+                    LOG.exception('error in service %s', act['service'])
             elif 'condition' in act:
                 if not self.check_condition(act, self.context):
                     LOG.info('break on condition %s', act)
@@ -399,7 +402,7 @@ class Rule(AbstractRule):
             log_service(act.get('data'), rule_context)
 
         elif s_name == 'slack':
-            await slack_service(act.get('data'), rule_context, self.context)
+            slack_service(act.get('data'), rule_context, self.context)
 
         else:
             LOG.error('invalid service name: %s', s_name)
